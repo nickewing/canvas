@@ -8,20 +8,23 @@
          handle_info/2, terminate/2, code_change/3]).
 
 %% Server interface
--export([start/0, logon/1, logout/0, list/0, message/2]).
+-export([start/0, logon/1, logout/0, join/0, list/0, send_line/2]).
+
+-include("spatial.hrl").
 
 %% internal server state
 -record(state, {clients}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Server interface
-start()         -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-cast(M)         -> gen_server:cast(?MODULE, M).
-call(M)         -> gen_server:call(?MODULE, M).
-logon(Box)      -> call({logon, Box}).
-logout()        -> call(logout).
-message(M, Box) -> call({send_message, M, Box}).
-list()          -> call(list).
+start()     -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
+cast(M)     -> gen_server:cast(?MODULE, M).
+call(M)     -> gen_server:call(?MODULE, M).
+logon(Box)  -> call({logon, Box}).
+logout()    -> call(logout).
+join()      -> call(join).
+list()      -> call(list).
+send_line(Line, SenderSID) -> call({send_line, Line, SenderSID}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% gen_server Callbacks
@@ -40,12 +43,15 @@ handle_call({logon, Box}, {Pid, _}, S) ->
 handle_call(logout, {Pid, _}, S) ->
   {reply, ok, client_logoff(Pid, S)};
 
+handle_call(join, {_Pid, _}, S) ->
+  {SID, S1} = client_join(S),
+  {reply, {sid, SID}, S1};
+
 handle_call(list, _From, #state{clients = C} = S) ->
   {reply, C, S};
 
-handle_call({send_message, Msg, Box}, _From, S) ->
-  io:format("Server callling dist message: ~p to ~p~n", [Msg, S]),
-  respond_to_clients(S, Msg, Box),
+handle_call({send_line, Line, SenderSID}, _From, #state{clients = C} = S) ->
+  distr_lines(C, Line, SenderSID),
   {reply, ok, S};
 
 handle_call(_Message, _From, S) ->
@@ -81,12 +87,31 @@ client_logon(Pid, Box, #state{clients = C} = S) ->
 client_logoff(Pid, #state{clients = C} = S) ->
   S#state{clients = client_list:remove(Pid, C)}.
 
-respond_to_clients(#state{clients = C}, Msg, Box) ->
-  io:format("Server dist message: ~p to ~p~n", [Msg, C]),
-  respond_to_clients(client_list:filter_by_box(Box, C), Msg).
-respond_to_clients([], _Msg) ->
+%% Generate a unique SID, create a new mailbox and add it to the client list
+client_join(#state{clients = C} = S) ->
+  SID      = generate_sid(C),
+  {ok, MB} = client_mailbox:start_new(SID),
+  C1       = client_list:add(SID, none, MB, C),
+  {SID, S#state{clients = C1}}.
+
+%% Generate a SID and make sure it doesn't already exist (although unlikely)
+generate_sid(Clients) ->
+  SID = util:term_to_hex(term_to_binary(erlang:now())),
+  case client_list:sid_exists(SID, Clients) of
+    true  -> generate_sid(Clients);
+    false -> SID
+  end.
+
+%% Distribute lines to mailboxes and line store
+distr_lines(Clients, Line, SenderSID) ->
+  Box = spatial:line_box(Line),
+  To  = lists:delete(SenderSID, client_list:filter_by_box(Box, Clients)),
+  % TODO: send line to linestore
+  send_line_to_mailbox(To, Line).
+
+% Send a line to a list of mailboxes
+send_line_to_mailbox([], _Line) ->
   ok;
-respond_to_clients([H|T], Msg) ->
-  io:format("Resp ~w~n", [H]),
-  H ! {message, Msg},
-  respond_to_clients(T, Msg).
+send_line_to_mailbox([H|T], Line) ->
+  H ! Line,
+  send_line_to_mailbox(T, Line).

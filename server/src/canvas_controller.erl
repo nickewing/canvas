@@ -3,10 +3,15 @@
 -export([
   update/1,
   done/1,
-  blah/1
+  % blah/1,
+  join/1
 ]).
 
--include("config.hrl").
+-include("canvas.hrl").
+
+join(Req) ->
+  {sid, SID} = client_manager:join(),
+  {ok, SID}.
 
 update(Req) ->
   QueryStr = Req:parse_qs(),
@@ -37,16 +42,16 @@ done(Req) ->
       <<"Failed to send: invalid bounding box.">>
   end.
 
-blah(_Req) -> 
-  {ls_conn, Db, _} = line_store:connect(),
-  Data = pgsql:squery(
-    Db,
-    "SELECT *
-    FROM coords
-    WHERE box '((2345.000,100.12341),(1150.12341,1110.12341))' && coord_box;"
-  ),
-  io:format("Data: ~p~n", [Data]),
-  ok.
+% blah(_Req) -> 
+%   {ls_conn, Db, _} = line_store:connect(),
+%   Data = pgsql:squery(
+%     Db,
+%     "SELECT *
+%     FROM coords
+%     WHERE box '((2345.000,100.12341),(1150.12341,1110.12341))' && coord_box;"
+%   ),
+%   io:format("Data: ~p~n", [Data]),
+%   ok.
 
 
 %% Parse bounding box from query string

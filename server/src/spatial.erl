@@ -9,14 +9,14 @@
 %%% box functions
 
 %% build a bounding box for a list of coords
-find_points_box(Points) ->
+points_box(Points) ->
   [X, Y, X1, Y1] = lists:foldl(
-    fun find_points_box/2,
+    fun points_box/2,
     [unset, unset, unset, unset],
     Points
   ),
   #box{x = X, y = Y, x1 = X1, y1 = Y1}.
-find_points_box({X, Y}, [Xo, Yo, X1o, Y1o]) ->
+points_box({X, Y}, [Xo, Yo, X1o, Y1o]) ->
   [
     util:min_with_unset(Xo,  X),
     util:min_with_unset(Yo,  Y),

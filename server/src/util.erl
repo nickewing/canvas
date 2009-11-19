@@ -32,3 +32,16 @@ str_to_num(_) ->
   {error, "Not a string"}.
 
 num_to_str(X) -> mochinum:digits(X).
+
+term_to_hex(B) ->
+  lists:flatten(
+    [io_lib:format("~2.16.0b",[N]) || N <- binary_to_list(erlang:md5(B))]
+  ).
+
+int_to_hex(N) ->
+  [R, _] = io_lib:fwrite("~.16B", [N]),
+  R.
+
+hex_to_int(N) ->
+  {_, [R], _} = io_lib:fread("~16u", N),
+  R.

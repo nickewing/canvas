@@ -13,10 +13,7 @@
 ]).
 
 -include("spatial.hrl").
--include("config.hrl").
-
--record(user, {ip_addr}).
--record(line, {coords, size, color, user}).
+-include("canvas.hrl").
 
 -record(ls_conn, {db, manager}).
 
