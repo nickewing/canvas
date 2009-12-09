@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark" 
+			   xmlns:mx="library://ns.adobe.com/flex/halo" minWidth="1024" minHeight="768" xmlns:flexunit="flexunit.flexui.*"    creationComplete="onCreationComplete()" >	
+<fx:Script>
+	<![CDATA[
+
+		import org.flexunit.runner.Request;
+		import com.canvas.test.MainSuite;
+		import com.canvas.test.dataIO.TestBox;
+		import com.canvas.test.dataIO.TestLine;
+		import com.canvas.test.dataIO.TestTileListenerManager;
+
+		public function currentRunTestSuite():Array
+		{
+			var testsToRun:Array = new Array();
+			testsToRun.push(com.canvas.test.MainSuite);
+			testsToRun.push(com.canvas.test.dataIO.TestBox);
+			testsToRun.push(com.canvas.test.dataIO.TestLine);
+			testsToRun.push(com.canvas.test.dataIO.TestTileListenerManager);
+			return testsToRun;
+		}
+		private function onCreationComplete():void
+		{
+			testRunner.runWithFlexUnit4Runner(currentRunTestSuite(), "client");
+		}
+]]>
+</fx:Script>
+<flexunit:FlexUnitTestRunnerUI id="testRunner"/>
+</s:Application>

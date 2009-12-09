@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Application xmlns:fx="http://ns.adobe.com/mxml/2009" 
+			   xmlns:s="library://ns.adobe.com/flex/spark"
+			   xmlns:mx="library://ns.adobe.com/flex/halo"
+			   xmlns:canvas="com.canvas.*"
+			   xmlns:components="com.canvas.gui.components.*"
+			   xmlns:gui="com.canvas.gui.*"
+			   minWidth="600"
+			   minHeight="500"
+			   backgroundColor="#EEEEEE"
+			   addedToStage="init(event)">
+	<fx:Script source="MainWindow.as" />
+	
+	<s:VGroup width="100%"
+			  height="100%"
+			  gap="0"
+			  horizontalAlign="center"
+			  paddingLeft="10"
+			  paddingRight="10"
+			  paddingTop="10"
+			  paddingBottom="10">
+		<s:Panel title="Canvas"
+				 width="100%"
+				 height="100%"
+				 maxWidth="900"
+				 maxHeight="900">
+			<s:layout>
+				<s:VerticalLayout gap="2" />
+			</s:layout>
+			
+			<gui:CanvasView width="100%"
+							 height="100%"
+							 id="canvasView"
+							 drawingSize="{lineSize.value}"
+							 drawingColor="{colorPicker.selectedColor}" />
+			
+			<mx:Canvas backgroundColor="#DDDDDD"
+					   width="100%">
+				<s:HGroup paddingLeft="5"
+						  paddingRight="5"
+						  paddingTop="2"
+						  paddingBottom="2"
+						  width="100%"
+						  verticalAlign="middle">
+					
+					<s:ButtonBar id="btnBar"
+								 requireSelection="true"
+								 horizontalCenter="0"
+								 verticalCenter="0"
+								 selectedIndex="1"
+								 change="changeMode(event)"
+								 skinClass="com.canvas.gui.skins.CustomButtonBarSkin">
+						<s:dataProvider>
+							<s:ArrayList>
+								<fx:Object label="Move"
+										   icon="@Embed(source='assets/arrow_out.png')"/>
+								<fx:Object label="Paint"
+										   icon="@Embed(source='assets/paintbrush.png')"/>	
+							</s:ArrayList>
+						</s:dataProvider>
+					</s:ButtonBar>
+					
+					<s:HGroup gap="0"
+							  verticalAlign="middle">
+						<mx:Label text="Paint Color: " />
+						<mx:ColorPicker id="colorPicker"
+										change="canvasView.mode = CanvasView.MODE_DRAWING" />
+					</s:HGroup>
+					<s:HGroup gap="0"
+							  verticalAlign="middle">
+						<mx:Label text="Brush Size: " />
+						<s:HGroup gap="0"
+								  verticalAlign="middle">
+							
+							<s:TextInput id="lineSizeInput"
+										 width="20"
+										 text="{lineSize.value}"
+										 click="lineSizeInput.selectAll()"
+										 maxChars="2"
+										 change="lineSizeTextChange(event)" />
+							
+							<s:Spinner id="lineSize"
+									   minimum="{MIN_LINE_SIZE}"
+									   maximum="{MAX_LINE_SIZE}"
+									   value="{INIT_LINE_SIZE}"
+									   height="{lineSizeInput.height}"
+									   change="canvasView.mode = CanvasView.MODE_DRAWING" />
+						</s:HGroup>
+					</s:HGroup>
+					
+					<mx:Spacer width="100%" />
+					
+					<components:IconButton label="Jump"
+										   click="showJumpWindow()"
+										   icon="@Embed(source='assets/shape_square_go.png')"
+										   skinClass="com.canvas.gui.skins.IconButtonSkin"
+										   toolTip="Jump to a tile" />
+					
+				</s:HGroup>
+			</mx:Canvas>
+		</s:Panel>
+	</s:VGroup>
+</s:Application>

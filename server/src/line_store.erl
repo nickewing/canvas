@@ -55,14 +55,14 @@ get_lines(#ls_conn{db = Db}, Box, T0) ->
   ),
   Data.
 
-save_line(Db, #line{coords = C, size = S, user = #user{ip_addr = IP}}) ->
+save_line(Db, #line{points = C, size = S, user = #user{ip_addr = IP}}) ->
   {ok, _Res} = pgsql:pquery(
     Db,
     "INSERT INTO lines
     (coords, size, color, ip_addr)
     VALUES ($1, $2, $3, $4)",
     [
-      coords_to_db_str(C),
+      points_to_db_str(C),
       S,
       C,
       IP
@@ -90,18 +90,17 @@ db_str_to_box_regex() ->
 db_str_to_box(Str, CRegex) ->
   {match, Ms} = re:run(Str, CRegex),
   [_, {X00, X01}, _, {Y00, Y01}, _, {X10, X11}, _, {Y10, Y11}] = Ms,
-  {ok, X}  = substr_to_num(Str, X00 + 1, X01),
-  {ok, Y}  = substr_to_num(Str, Y00 + 1, Y01),
-  {ok, X1} = substr_to_num(Str, X10 + 1, X11),
-  {ok, Y1} = substr_to_num(Str, Y10 + 1, Y11),
+  X  = substr_to_num(Str, X00 + 1, X01),
+  Y  = substr_to_num(Str, Y00 + 1, Y01),
+  X1 = substr_to_num(Str, X10 + 1, X11),
+  Y1 = substr_to_num(Str, Y10 + 1, Y11),
   #box{x = X, y = Y, x1 = X1, y1 = Y1}.
 
-%% @ private
 substr_to_num(Str, Start, Len) ->
   util:str_to_num(string:substr(Str, Start, Len)).
 
-coords_to_db_str(Coords) ->
-  string:join(lists:map(fun coord_to_str/1, Coords), ",").
+points_to_db_str(Coords) ->
+  string:join(lists:map(fun point_to_str/1, Coords), ",").
 
-coord_to_str({X, Y}) -> util:num_to_str(X) ++ "," ++ util:num_to_str(Y).
+point_to_str({X, Y}) -> util:num_to_str(X) ++ "," ++ util:num_to_str(Y).
 

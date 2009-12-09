@@ -8,6 +8,8 @@
 
 -behaviour(supervisor).
 
+-include("canvas.hrl").
+
 %% External exports
 -export([start_link/0, upgrade/0]).
 
@@ -43,9 +45,10 @@ upgrade() ->
 init([]) ->
     Ip = case os:getenv("MOCHIWEB_IP") of false -> "0.0.0.0"; Any -> Any end,   
     WebConfig = [
-         {ip, Ip},
-                 {port, 8000},
-                 {docroot, canvas_deps:local_path(["priv", "www"])}],
+      {ip, Ip},
+      {port, ?server_port},
+      {docroot, canvas_deps:local_path(["priv", "www"])}
+    ],
     Web = {canvas_web,
            {canvas_web, start, [WebConfig]},
            permanent, 5000, worker, dynamic},

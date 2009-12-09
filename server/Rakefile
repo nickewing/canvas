@@ -1,0 +1,71 @@
+require 'rake'
+require 'rake/clean'
+
+# Configuration
+START_MODULE = "canvas"
+TEST_MODULE = "test_runner"
+
+
+# No Need to change
+PWD = `pwd`.strip
+
+DEPS = FileList['deps/*']
+
+deps_flags = DEPS.inject("") do |str, d|
+  str + " -I #{d}/include -pa #{d}/ebin"
+end
+
+ERLC_FLAGS = "-I include +warn_unused_vars +warn_unused_import #{deps_flags}"
+
+ERL_RUN = "erl -pa #{PWD}/ebin #{PWD}/deps/*/ebin"
+
+SRC = FileList['src/**/*.erl']
+OBJ = SRC.pathmap("%{src,ebin}X.beam")
+APP = FileList['src/**/*.app']
+CLEAN.include(['**/*.dump'])
+CLOBBER.include(['**/*.beam'])
+
+def build_package_dir(source)
+  dir = 'ebin' + File.split(source)[0][/\/.*$/].to_s
+  mkdir_p dir unless File.exists? dir
+  dir
+end
+
+rule '.beam' => ["%{ebin,src}X.erl"] do |t|
+  out = build_package_dir(t.source)
+  sh "erlc -pa ebin -W #{ERLC_FLAGS} -o #{out} #{t.source}"
+end
+
+task :copy_app do
+  APP.each do |f|
+    dir = build_package_dir(f)
+    filename = File.split(f).last
+    copy f, dir unless File.mtime(f) <= File.mtime(File.join(dir, filename))
+  end
+end
+
+desc 'Compile all'
+task :compile => [:copy_app] + OBJ
+
+desc "Start development mode"
+task :dev_start => [:compile] do
+  sh "#{ERL_RUN} -boot start_sasl -s reloader -s #{START_MODULE}"
+end
+
+desc "Start"
+task :start => [:compile] do
+  sh "#{ERL_RUN} -boot start_sasl -s #{START_MODULE}"
+end
+
+desc "Run unit tests" 
+task :test => [:compile] do
+  sh "#{ERL_RUN} -s #{TEST_MODULE} test_app_modules canvas -run init stop -noshell"
+end
+
+desc "Generate documentation"
+task :doc => [:compile] do
+  sh "cd doc && erl -noshell -run edoc files ../#{SRC.join(" ../")} -run init stop"
+end
+
+
+task :default => :compile

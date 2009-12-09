@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testrun name="" >
+<testsuite  name="Default Test Suite" project="client">
+<testsuite name="com.canvas.test:MainSuite" type="testsuiteclass"/>
+<testsuite name="com.canvas.test.dataIO:TestBox" type="testcaseclass"/>
+<testsuite name="com.canvas.test.dataIO:TestLine" type="testcaseclass"/>
+<testsuite name="com.canvas.test.dataIO:TestTileListenerManager" type="testcaseclass"/>
+</testsuite>
+</testrun>

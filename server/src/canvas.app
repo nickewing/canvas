@@ -4,9 +4,16 @@
   {modules, [
     canvas,
     canvas_app,
+    canvas_deps,
     canvas_sup,
     canvas_web,
-    canvas_deps
+    client_list,
+    client_mailbox,
+    client_manager,
+    line_store,
+    request_controller,
+    spatial,
+    util
   ]},
   {registered, []},
   {mod, {canvas_app, []}},

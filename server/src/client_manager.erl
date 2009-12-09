@@ -8,41 +8,45 @@
          handle_info/2, terminate/2, code_change/3]).
 
 %% Server interface
--export([start/0, logon/1, logout/0, join/0, list/0, send_line/2]).
+-export([
+  start/0,
+  join/0,
+  list/0,
+  fetch_sid/1,
+  update_sid/3,
+  remove_sid/1,
+  filter_by_box/1
+  ]).
 
--include("spatial.hrl").
+-include("canvas.hrl").
 
 %% internal server state
 -record(state, {clients}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% External API
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %%% Server interface
 start()     -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-cast(M)     -> gen_server:cast(?MODULE, M).
+%cast(M)     -> gen_server:cast(?MODULE, M).
 call(M)     -> gen_server:call(?MODULE, M).
-logon(Box)  -> call({logon, Box}).
-logout()    -> call(logout).
 join()      -> call(join).
 list()      -> call(list).
-send_line(Line, SenderSID) -> call({send_line, Line, SenderSID}).
+fetch_sid(SID) -> call({fetch_sid, SID}).
+update_sid(SID, Box, MailBox) -> call({update_sid, SID, Box, MailBox}).
+remove_sid(SID) -> call({remove_sid, SID}).
+filter_by_box(Box) -> call({filter_by_box, Box}).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% gen_server Callbacks
 
 %% Called when a connection is made to the server
 init([]) ->
   io:format("Client manager started.~n"),
-  process_flag(trap_exit, true),
+  %process_flag(trap_exit, true),
   {ok, #state{clients = client_list:new()}}.
 
 %% Invoked in response to gen_server:call
-handle_call({logon, Box}, {Pid, _}, S) ->
-  io:format("logon~p  ~p~n", [Box, Pid]),
-  {reply, ok, client_logon(Pid, Box, S)};
-
-handle_call(logout, {Pid, _}, S) ->
-  {reply, ok, client_logoff(Pid, S)};
-
 handle_call(join, {_Pid, _}, S) ->
   {SID, S1} = client_join(S),
   {reply, {sid, SID}, S1};
@@ -50,20 +54,28 @@ handle_call(join, {_Pid, _}, S) ->
 handle_call(list, _From, #state{clients = C} = S) ->
   {reply, C, S};
 
-handle_call({send_line, Line, SenderSID}, _From, #state{clients = C} = S) ->
-  distr_lines(C, Line, SenderSID),
-  {reply, ok, S};
+handle_call({fetch_sid, SID}, _From, S) ->  
+  #state{clients = C} = S1 = ensure_sid_exists(SID, S),
+  {reply, client_list:fetch_sid(SID, C), S1};
+
+handle_call({update_sid, SID, Box, MailBox}, _From, #state{clients = C} = S) ->
+  {reply, ok, S#state{clients = client_list:save(SID, Box, MailBox, C)}};
+
+handle_call({remove_sid, SID}, _From, #state{clients = C} = S) ->
+  {reply, ok, S#state{clients = client_list:remove_sid(SID, C)}};
+
+handle_call({filter_by_box, Box}, _From, #state{clients = C} = S) ->
+  {reply, client_list:filter_by_box(Box, C), S};
 
 handle_call(_Message, _From, S) ->
-  io:format("err~n"),
   {reply, error, S}.
 
 %% Invoked in response to gen_server:cast
 handle_cast(_Message, S) -> {noreply, S}.
 
 %% Handle exit of linked processes
-handle_info({'EXIT', Pid, _Reason}, S) ->
-  {noreply, client_logoff(Pid, S)};
+% handle_info({'EXIT', Pid, _Reason}, S) ->
+%   {noreply, client_logoff(Pid, S)};
 handle_info(_Message, S) -> {noreply, S}.
 
 %% Server termination
@@ -74,44 +86,37 @@ code_change(_OldVersion, S, _Extra) -> {ok, S}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Internal functions
+%%% Internal API
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-client_logon(Pid, Box, #state{clients = C} = S) ->
-  {NewlyAdded, C1} = client_list:add(Pid, Box, C),
-  case NewlyAdded of
-    true  -> link(Pid);
-    _     -> ok
-  end,
-  S#state{clients = C1}.
+ensure_sid_exists(SID, #state{clients = C} = S) ->
+  case client_list:sid_exists(SID, C) of
+    true  ->
+      S;
+    false ->
+      create_sid_client(SID, S)
+  end.
 
-client_logoff(Pid, #state{clients = C} = S) ->
-  S#state{clients = client_list:remove(Pid, C)}.
+create_sid_client(SID, #state{clients = C} = S) ->
+  {ok, MB} = client_mailbox:start_new(SID),
+  S#state{clients = client_list:save(SID, none, MB, C)}.
 
 %% Generate a unique SID, create a new mailbox and add it to the client list
 client_join(#state{clients = C} = S) ->
   SID      = generate_sid(C),
-  {ok, MB} = client_mailbox:start_new(SID),
-  C1       = client_list:add(SID, none, MB, C),
-  {SID, S#state{clients = C1}}.
+  {SID, create_sid_client(SID, S)}.
 
 %% Generate a SID and make sure it doesn't already exist (although unlikely)
 generate_sid(Clients) ->
-  SID = util:term_to_hex(term_to_binary(erlang:now())),
+  random:seed(now()),
+  SID  = util:to_hex(erlang:md5(term_to_binary(random:uniform()))),
   case client_list:sid_exists(SID, Clients) of
-    true  -> generate_sid(Clients);
-    false -> SID
+    true  ->
+      generate_sid(Clients);
+    false ->
+      SID
   end.
 
-%% Distribute lines to mailboxes and line store
-distr_lines(Clients, Line, SenderSID) ->
-  Box = spatial:line_box(Line),
-  To  = lists:delete(SenderSID, client_list:filter_by_box(Box, Clients)),
-  % TODO: send line to linestore
-  send_line_to_mailbox(To, Line).
 
-% Send a line to a list of mailboxes
-send_line_to_mailbox([], _Line) ->
-  ok;
-send_line_to_mailbox([H|T], Line) ->
-  H ! Line,
-  send_line_to_mailbox(T, Line).
+
+

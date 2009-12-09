@@ -1,10 +1,6 @@
-%% @author author <author@example.com>
-%% @copyright YYYY author.
-
-%% @doc TEMPLATE.
-
 -module(canvas).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
+
 -export([start/0, stop/0]).
 
 ensure_started(App) ->
@@ -14,7 +10,7 @@ ensure_started(App) ->
     {error, {already_started, App}} ->
       ok
   end.
-        
+
 %% @spec start() -> ok
 %% @doc Start the canvas server.
 start() ->

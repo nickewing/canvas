@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/halo"
+				width="250"
+				layout="vertical"
+				showCloseButton="true"
+				title="Jump To Tile"
+				close="closeWindow()">
+	<fx:Script source="JumpWindowScript.as" />
+	
+	<s:Label text="Enter the coordinates of the tile you would like to jump to and click 'Jump'."
+			 width="240" />
+	
+	<s:HGroup verticalAlign="middle">
+		<s:Label text="x: " />
+		<s:TextInput id="jumpXInput"
+					 text="0"
+					 maxChars="12"
+					 width="70" />
+		<s:Label text="y: " />
+		<s:TextInput id="jumpYInput"
+					 text="0"
+					 maxChars="12"
+					 width="70" />	
+	</s:HGroup>
+	
+	<s:HGroup width="100%">
+		<mx:Spacer width="100%" />
+		<s:Button label="Jump"
+				  click="jump()" />
+		<s:Button label="Cancel"
+				  click="closeWindow()" />
+	</s:HGroup>
+	
+</mx:TitleWindow>
