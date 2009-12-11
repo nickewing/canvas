@@ -1,7 +1,7 @@
 -module(request_controller).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 
--export([route_request/1, join/1, update/1, send_line/1, send_line_worker/2]).
+-export([route_request/2, join/2, update/2, send_line/2, send_line_worker/3]).
 
 -include("canvas.hrl").
 -include("spatial.hrl").
@@ -11,15 +11,16 @@
 %%% External API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-route_request(Req) ->
+route_request(Req, S) ->
   "/" ++ Path = Req:get(path),
+  io:format("~w Routing ~w ~s~n", [self(), Req:get(method), Req:get(path)]),
   case list_to_atom(Path) of
     Action when Action == join;
                 Action == update;
                 Action == send_line ->
-      try ?MODULE:Action(Req) of
+      io:format("~w Action ~w~n", [self(), Action]),
+      try ?MODULE:Action(Req, S) of
         Result ->
-          io:format("Action ~w ~w~n", [Action, self()]),
           Req:ok({"text/plain", [], [Result]})
       catch
         Class:Exception ->
@@ -34,11 +35,11 @@ route_request(Req) ->
   end.
 
 %% Distribute lines to mailboxes and line store
-send_line_worker(#line{points = P} = Line, SenderSID) ->
-  %io:format("Got new line: ~p from ~s~n", [Line, SenderSID]),
+send_line_worker(_S, #line{points = P} = Line, SenderSID) ->
+  io:format("~w Worker got line: ~p from ~s~n", [self(), Line, SenderSID]),
   Box = spatial:points_box(P),
   To  = lists:keydelete(SenderSID, 1, client_manager:filter_by_box(Box)),
-  %io:format("Sending to: ~p~n", [To]),
+  io:format("~w Worker sending line to: ~p~n", [self(), To]),
   % TODO: send line to linestore
   send_line_to_mailboxes(To, Line).
 
@@ -48,52 +49,57 @@ send_line_worker(#line{points = P} = Line, SenderSID) ->
 
 %% Actions
 
-join(_Req) ->
+join(_Req, _S) ->
   {sid, SID} = client_manager:join(),
   resp_ok(SID).
 
-update(Req) ->
+update(Req, _S) ->
   {SID, QS} = parse_qs_sid(Req),
   Tiles     = parse_tiles(proplists:get_value("t", QS)),
   case fetch_updates(Tiles, SID) of
     Lines when is_list(Lines) ->
       resp_ok(lines_to_resp_str(Lines));
     cancel ->
-      io:format("Responded with cancelled~n"),
-      resp_ok();
+      resp_cancelled();
     timeout ->
       resp_timeout()
   end.
 
-send_line(Req) ->
+send_line(Req, S) ->
   {SID, QS} = parse_qs_sid(Req),
   Line = add_line_user(Req, parse_line(proplists:get_value("l", QS))),
-  spawn(?MODULE, send_line_worker, [Line, SID]),
+  spawn(?MODULE, send_line_worker, [S, Line, SID]),
   resp_ok().
 
+
+
 fetch_updates(Tiles, SID) ->
-  Box = box_tiles(Tiles),
-  {CBox, Mailbox} = client_manager:fetch_sid(SID),
-  case (Box == CBox) of
-    true ->
-      client_mailbox:subscribe(Mailbox),
-      wait_for_lines(?line_wait_timeout);
-    false ->
-      io:format("Update sid ~s: ~p ~w~n", [SID, Box, Mailbox]),
-      client_manager:update_sid(SID, Box, Mailbox),
-      client_mailbox:empty_lines(Mailbox),
-      client_mailbox:subscribe(Mailbox),
-      %% TODO: fetch lines from linestore
-      %% Lines = line_store:fecth_lines...
-      wait_for_lines(?line_wait_timeout)
-  end.
+  NewBox = box_tiles(Tiles),
+  io:format("~w Update box: ~p~n", [self(), NewBox]),
+  io:format("~w Update tiles: ~p~n", [self(), Tiles]),
+  {OldBox, Mailbox} = client_manager:fetch_sid(SID),
+  client_mailbox:subscribe(Mailbox),
+  Lines = case (NewBox == OldBox) of
+            true ->
+              io:format("~w Same box~n", [self()]),
+              wait_for_lines(?line_wait_timeout);
+            false ->
+              io:format("~w Update sid ~s: ~p ~w~n", [self(), SID, NewBox, Mailbox]),
+              client_manager:update_sid(SID, NewBox, Mailbox),
+              client_mailbox:empty_lines(Mailbox),
+              %% TODO: fetch lines from linestore
+              %% Lines = line_store:fecth_lines...
+              wait_for_lines(?line_wait_timeout)
+          end,
+  client_mailbox:unsubscribe(Mailbox),
+  Lines.
 
 wait_for_lines(Timeout) ->
   receive
     {lines, Lines, FromMailbox} ->
       client_mailbox:empty_lines(FromMailbox),
       Lines;
-    cancel ->
+    unsubscribed ->
       cancel
   after Timeout ->
     timeout
@@ -123,15 +129,19 @@ box_tiles(Tiles) ->
 %% Responses
 
 resp_ok() ->
-  io:format("Result ~w OK~n", [self()]),
+  io:format("~w Response OK~n", [self()]),
   <<"OK">>.
 
+resp_cancelled() ->
+  io:format("~w Response CANCELLED~n", [self()]),
+  <<"CANCELLED">>.
+
 resp_ok(Str) ->
-  io:format("Result ~w OK ~s ~n", [self(), Str]),
+  io:format("~w Response OK ~s ~n", [self(), Str]),
   list_to_binary("OK " ++ Str).
 
 resp_timeout() ->
-  io:format("Result ~w TIMEOUT~n", [self()]),
+  io:format("~w Response TIMEOUT~n", [self()]),
   <<"TIMEOUT">>.
 
 
@@ -139,7 +149,13 @@ resp_timeout() ->
 %% Request Parsing
 
 parse_qs_sid(Req) ->
-  QS  = Req:parse_qs(),
+  QS  = case Req:get(method) of
+    Method when Method =:= 'GET';
+                Method =:= 'HEAD' ->
+      Req:parse_qs();
+    'POST' ->
+      Req:parse_post()
+  end,
   SID = proplists:get_value("sid", QS),
   {SID, QS}.
 

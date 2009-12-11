@@ -3,27 +3,77 @@
 				xmlns:s="library://ns.adobe.com/flex/spark" 
 				xmlns:mx="library://ns.adobe.com/flex/halo"
 				width="250"
+				backgroundColor="#EEEEEE"
 				layout="vertical"
 				showCloseButton="true"
 				title="Jump To Tile"
 				close="closeWindow()">
-	<fx:Script source="JumpWindowScript.as" />
+	<fx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			
+			//---------------------------------------------------------------------
+			//
+			//	Variables
+			//
+			//---------------------------------------------------------------------
+			
+			protected var _canvasView:CanvasView;
+			
+			//---------------------------------------------------------------------
+			//
+			//  Properties
+			//
+			//---------------------------------------------------------------------
+			
+			
+			public function get canvasView():CanvasView { return _canvasView; }
+			public function set canvasView(v:CanvasView):void { _canvasView = v; }
+			
+			//---------------------------------------------------------------------
+			//
+			//  Methods: Event handling
+			//
+			//---------------------------------------------------------------------
+			
+			protected function closeWindow():void {
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function constrainJumpCoord(str:String):Number {
+				var v:Number = parseInt(str);
+				if (isNaN(v)) v = 0;
+				return v;
+			}
+			
+			protected function jump():void {
+				var jumpX:Number = constrainJumpCoord(jumpXInput.text);
+				var jumpY:Number = constrainJumpCoord(jumpYInput.text);
+				
+				_canvasView.jumpToTile(jumpX, jumpY);
+				
+				closeWindow();
+			}
+		]]>
+	</fx:Script>
 	
 	<s:Label text="Enter the coordinates of the tile you would like to jump to and click 'Jump'."
 			 width="240" />
 	
-	<s:HGroup verticalAlign="middle">
-		<s:Label text="x: " />
-		<s:TextInput id="jumpXInput"
-					 text="0"
-					 maxChars="12"
-					 width="70" />
-		<s:Label text="y: " />
-		<s:TextInput id="jumpYInput"
-					 text="0"
-					 maxChars="12"
-					 width="70" />	
-	</s:HGroup>
+	<s:VGroup horizontalAlign="center" width="100%">
+		<s:HGroup verticalAlign="middle">
+			<s:Label text="x: " />
+			<s:TextInput id="jumpXInput"
+						 text="0"
+						 maxChars="12"
+						 width="70" />
+			<s:Label text="y: " />
+			<s:TextInput id="jumpYInput"
+						 text="0"
+						 maxChars="12"
+						 width="70" />	
+		</s:HGroup>
+	</s:VGroup>
 	
 	<s:HGroup width="100%">
 		<mx:Spacer width="100%" />

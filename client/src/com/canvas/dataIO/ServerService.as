@@ -30,7 +30,7 @@ public class ServerService extends HTTPService {
 		
 		url          = "http://" + SERVER_HOST + ":" + SERVER_PORT + "/" + name;
 		resultFormat = "text";
-		method       = "GET";
+		method       = "POST";
 	}
 }
 

@@ -65,6 +65,9 @@ public class SessionManager extends EventDispatcher {
 		return _instance;
 	}
 	
+	/**
+	 * Start the manager
+	 */
 	public static function start():void {
 		instance;
 	}
@@ -118,7 +121,7 @@ public class SessionManager extends EventDispatcher {
 	 * Handle join fault
 	 */
 	protected function handleJoinFault(e:FaultEvent):void {
-		
+		dispatchEvent(e);
 		
 		trace("failed to join");
 	}

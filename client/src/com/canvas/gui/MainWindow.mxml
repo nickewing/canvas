@@ -8,7 +8,7 @@
 			   minWidth="600"
 			   minHeight="500"
 			   backgroundColor="#EEEEEE"
-			   addedToStage="init(event)">
+			   initialize="init(event)">
 	<fx:Script source="MainWindow.as" />
 	
 	<s:VGroup width="100%"

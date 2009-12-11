@@ -1,9 +1,15 @@
-import com.canvas.dataIO.SessionManager;
 import com.canvas.dataIO.TileListenerManager;
 import flash.events.Event;
+import mx.rpc.events.FaultEvent;
 import mx.containers.TitleWindow;
 import mx.managers.PopUpManager;
 import spark.events.IndexChangeEvent;
+
+//---------------------------------------------------------------------
+//
+//  Constants
+//
+//---------------------------------------------------------------------
 
 /**
  * Minimum drawing line size allowed
@@ -18,15 +24,21 @@ protected const MAX_LINE_SIZE:Number = 50;
  */
 protected const INIT_LINE_SIZE:Number = 3;
 
+//---------------------------------------------------------------------
+//
+//  Methods: Event handling
+//
+//---------------------------------------------------------------------
 
+/**
+ * Setup on initialization
+ */
 protected function init(e:Event):void {
-	SessionManager.instance.join();
-	SessionManager.instance.addEventListener(Event.CONNECT, sessionJoined);
-}
-
-protected function sessionJoined(e:Event):void {
-	trace("session joined handler");
-	TileListenerManager.instance.enabled = true;
+	showSessionWindow();
+	
+	TileListenerManager.instance.addEventListener(FaultEvent.FAULT, function (e:Event):void {
+		showReconnectWindow();
+	});
 }
 
 /**
@@ -60,6 +72,28 @@ protected function changeMode(e:IndexChangeEvent):void {
 		canvasView.mode = CanvasView.MODE_DRAWING;
 		break
 	}
+}
+
+//---------------------------------------------------------------------
+//
+//  Methods
+//
+//---------------------------------------------------------------------
+
+/**
+ * Open the session window
+ */
+protected function showSessionWindow():void {
+	var window:TitleWindow = PopUpManager.createPopUp(this, SessionWindow, true) as TitleWindow;
+	PopUpManager.centerPopUp(window);
+}
+
+/**
+ * Open reconnect window
+ */
+protected function showReconnectWindow():void {
+	var window:TitleWindow = PopUpManager.createPopUp(this, ReconnectWindow, true) as ReconnectWindow;
+	PopUpManager.centerPopUp(window);
 }
 
 /**

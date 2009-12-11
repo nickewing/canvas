@@ -6,11 +6,10 @@
 
 -define(server_port, 8000).
 
--define(line_wait_timeout, 10000).
+-define(line_wait_timeout, 20000). % 20 seconds
 
-
--define(mailbox_timeout, 3000000). % 5 minutes
--define(mailbox_timeout_interval, 3000000). % 5 minutes
+-define(mailbox_timeout, 300000). % 5 minutes
+-define(mailbox_timeout_interval, 60000). % 1 minute
 
 %% Postgres db info
 -define(ls_store_host,  "localhost").

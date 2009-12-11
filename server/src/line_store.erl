@@ -102,5 +102,6 @@ substr_to_num(Str, Start, Len) ->
 points_to_db_str(Coords) ->
   string:join(lists:map(fun point_to_str/1, Coords), ",").
 
-point_to_str({X, Y}) -> util:num_to_str(X) ++ "," ++ util:num_to_str(Y).
+point_to_str({X, Y}) ->
+  util:num_to_str(X) ++ "," ++ util:num_to_str(Y).
 

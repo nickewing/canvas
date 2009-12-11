@@ -1,9 +1,12 @@
 package com.canvas.dataIO {
 
+import flash.events.Event;
+import flash.events.EventDispatcher;
+	
 import mx.rpc.events.FaultEvent;
 import mx.rpc.events.ResultEvent;
 
-public class TileListenerManager {
+public class TileListenerManager extends EventDispatcher {
 	
 	//---------------------------------------------------------------------
 	//
@@ -44,6 +47,9 @@ public class TileListenerManager {
 	//---------------------------------------------------------------------
 	
 	public function TileListenerManager() {
+		// only allow one request at a time, cancel upon replacing request
+		updateService.concurrency = "last";
+		
 		// setup event handlers for the service
 		updateService.addEventListener(ResultEvent.RESULT, handleUpdateResponse);
 		updateService.addEventListener(FaultEvent.FAULT, handleUpdateFault);
@@ -72,8 +78,10 @@ public class TileListenerManager {
 	
 	public function set enabled(v:Boolean):void {
 		_enabled = v;
-		if (v)
+		if (v) {
+			trace("TLM reset by enable");
 			reset();
+		}
 	}
 	public function get enabled():Boolean { return _enabled; }
 	
@@ -105,7 +113,7 @@ public class TileListenerManager {
 	 * Reset the manager's connection to the server
 	 */
 	public function reset():void {
-		updateService.cancel();
+		//updateService.cancel();
 		makeRequest();
 	}
 	
@@ -113,6 +121,7 @@ public class TileListenerManager {
 	 * Update listeners with response lines
 	 */
 	protected function updateListeners(lines:Array):void {
+		trace("handing out lines");
 		for (var i:Number = 0; i < lines.length; i++) {
 			for (var j:Number = 0; j < listeners.length; j++) {
 				var line:Line = lines[i] as Line;
@@ -129,8 +138,13 @@ public class TileListenerManager {
 	protected function makeRequest():void {
 		if (!_enabled) return;
 		
+		var tileStr:String = makeTileRequestString();
+		
+		if (!tileStr.length) return;
+		
+		trace("new update request");
 		updateService.send({
-			t: makeTileRequestString()
+			t: tileStr
 		});
 	}
 	
@@ -163,11 +177,12 @@ public class TileListenerManager {
 	protected function handleUpdateResponse(e:ResultEvent):void {
 		makeRequest();
 		
+		dispatchEvent(e);
+		
 		var resultParts:Array = e.result.toString().split(" ");
 		switch (resultParts[0]) {
 		case "OK":
-			trace("Got some lines");
-			//trace("Got lines: " + resultParts[1]);
+			trace("Got lines: " + resultParts[1]);
 			updateListeners(Line.unserializeLineArray(resultParts[1]));
 			break;
 		case "TIMEOUT":
@@ -180,7 +195,7 @@ public class TileListenerManager {
 	 * Handle update fault
 	 */
 	protected function handleUpdateFault(e:FaultEvent):void {
-		makeRequest();
+		dispatchEvent(e);
 		trace("update failure");
 	}
 }

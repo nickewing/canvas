@@ -2,6 +2,8 @@ package com.canvas.dataIO {
 
 import flash.events.TimerEvent;
 import flash.utils.Timer;
+
+import mx.rpc.events.FaultEvent;
 	
 public class SendLineManager {
 	//---------------------------------------------------------------------
@@ -57,6 +59,8 @@ public class SendLineManager {
 		lineCutTimer = new Timer(LINE_CUT_INTERVAL, 0);
 		
 		lineCutTimer.addEventListener(TimerEvent.TIMER, lineCut);
+		
+		sendLineService.addEventListener(FaultEvent.FAULT, sendLineFault);
 	}
 	
 	//---------------------------------------------------------------------
@@ -92,6 +96,7 @@ public class SendLineManager {
 	 * Send the serialized current line to the server
 	 */
 	protected function sendLine():void {
+		trace("sent line");
 		sendLineService.send({
 			l: _currentLine.serialize()
 		});
@@ -136,6 +141,13 @@ public class SendLineManager {
 	 */
 	protected function lineCut(e:TimerEvent):void {
 		endLine();
+	}
+	
+	/**
+	 * Error sending line to server.
+	 */
+	protected function sendLineFault(e:FaultEvent):void {
+		trace("error sending line");
 	}
 }
 

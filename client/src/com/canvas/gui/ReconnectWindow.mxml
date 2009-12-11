@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/halo"
+				layout="vertical"
+				width="300"
+				backgroundColor="#EEEEEE"
+				initialize="init(event)">
+	<fx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			import com.canvas.dataIO.TileListenerManager;
+			import mx.rpc.events.FaultEvent;
+			import mx.rpc.events.ResultEvent;
+			
+			//---------------------------------------------------------------------
+			//
+			//  Methods: Event handling
+			//
+			//---------------------------------------------------------------------
+			
+			/**
+			 * Setup on initialization
+			 */
+			protected function init(e:Event):void {
+				setTimeout(function ():void {
+					retryButton.visible = true;
+				}, 1000);;
+			}
+			
+			/**
+			 * Retry connection and close
+			 */
+			protected function retryConnection(e:MouseEvent):void {
+				trace("TLM reset by ReconnectWindow");
+				TileListenerManager.instance.reset();
+				PopUpManager.removePopUp(this);
+			}
+		]]>
+	</fx:Script>
+	
+	<s:Label id="statusText"
+			 text="Connection with the server was lost." />
+	
+	<s:VGroup horizontalAlign="center" width="100%">
+		<s:Button id="retryButton"
+				  label="Retry"
+				  visible="false"
+				  click="retryConnection(event)"/>
+	</s:VGroup>
+</mx:TitleWindow>

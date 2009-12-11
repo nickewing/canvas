@@ -3,20 +3,15 @@
 
 -behaviour(gen_server).
 
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2,
-         handle_info/2, terminate/2, code_change/3]).
-
-%% Server interface
 -export([
-  start/0,
-  join/0,
-  list/0,
-  fetch_sid/1,
-  update_sid/3,
-  remove_sid/1,
+  %% gen_server callbacks
+  init/1, handle_call/3, handle_cast/2,
+  handle_info/2, terminate/2, code_change/3,
+  %% Server interface
+  start/0, join/0, list/0,
+  fetch_sid/1, update_sid/3, remove_sid/1,
   filter_by_box/1
-  ]).
+]).
 
 -include("canvas.hrl").
 
@@ -42,7 +37,7 @@ filter_by_box(Box) -> call({filter_by_box, Box}).
 
 %% Called when a connection is made to the server
 init([]) ->
-  io:format("Client manager started.~n"),
+  io:format("~w Client manager started.~n", [self()]),
   %process_flag(trap_exit, true),
   {ok, #state{clients = client_list:new()}}.
 

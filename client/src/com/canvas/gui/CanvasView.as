@@ -85,6 +85,11 @@ public class CanvasView extends Canvas {
 	 */
 	protected var _drawingSize:Number = 2;
 	
+	/**
+	 * Has been resized once
+	 */
+	protected var hasBeenResized:Boolean;
+	
 	//---------------------------------------------------------------------
 	//
 	//  Constructor
@@ -104,8 +109,6 @@ public class CanvasView extends Canvas {
 		addEventListener(MouseEvent.ROLL_OUT,   mouseInteractionEnded);
 		
 		addEventListener(Event.RESIZE, resize);
-		
-		addEventListener(FlexEvent.CREATION_COMPLETE, creationComplete);
 	}
 	
 	//---------------------------------------------------------------------
@@ -147,18 +150,18 @@ public class CanvasView extends Canvas {
 	//--------------------------------------------------------------------------
 	
 	/**
-	 * Creation of object on stage complete
-	 */
-	protected function creationComplete(e:FlexEvent):void {
-		jumpToTile(0, 0);
-	}
-	
-	/**
 	 * Handle pane resize
 	 */
 	protected function resize(e:Event):void {
 		box.x1 = box.x + width;
 		box.y1 = box.y + height;
+		trace("resize");
+		
+		if (!hasBeenResized) {
+			setLocation(0, 0);
+			hasBeenResized = true;
+		}
+		
 		buildTiles();
 	}
 
@@ -311,20 +314,25 @@ public class CanvasView extends Canvas {
 		
 		if (!tileArrayEqual(currentTiles, newTiles)) {
 			// Reset the connection with the server since tiles were updated
+			trace("TLM reset by CanvasView 2");
 			TileListenerManager.instance.reset();
 		}
 		
 		currentTiles = newTiles;
 	}
 	
-	/**
-	 * Jump to tile by its bottom left coordinate
-	 */
-	public function jumpToTile(x:Number, y:Number):void {
+	protected function setLocation(x:Number, y:Number):void {
 		box.x  = (CanvasTile.SIZE * x) - (width - CanvasTile.SIZE) / 2;
 		box.y  = (CanvasTile.SIZE * y) - (height - CanvasTile.SIZE) / 2;
 		box.x1 = (CanvasTile.SIZE * x) + width - (width - CanvasTile.SIZE) / 2;
 		box.y1 = (CanvasTile.SIZE * y) + height - (height - CanvasTile.SIZE) / 2;
+	}
+	
+	/**
+	 * Jump to tile by its bottom left coordinate
+	 */
+	public function jumpToTile(x:Number, y:Number):void {
+		setLocation(x, y);
 		
 		buildTiles();
 	}

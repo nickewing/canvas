@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:TitleWindow xmlns:fx="http://ns.adobe.com/mxml/2009" 
+				xmlns:s="library://ns.adobe.com/flex/spark" 
+				xmlns:mx="library://ns.adobe.com/flex/halo"
+				layout="vertical"
+				width="200"
+				showCloseButton="false"
+				backgroundColor="#EEEEEE"
+				initialize="init(event)">
+	<fx:Script>
+		<![CDATA[
+			import mx.managers.PopUpManager;
+			import com.canvas.dataIO.SessionManager;
+			import com.canvas.dataIO.TileListenerManager;
+			import mx.rpc.events.FaultEvent;
+			
+			//---------------------------------------------------------------------
+			//
+			//  Methods: Event handling
+			//
+			//---------------------------------------------------------------------
+			
+			protected function init(e:Event):void {
+				SessionManager.instance.join();
+				SessionManager.instance.addEventListener(Event.CONNECT, sessionJoined);
+				SessionManager.instance.addEventListener(FaultEvent.FAULT, sessionJoinFailed);
+			}
+			
+			protected function sessionJoined(e:Event):void {
+				trace("session joined handler");
+				TileListenerManager.instance.enabled = true;
+				PopUpManager.removePopUp(this);
+			}
+			
+			protected function sessionJoinFailed(e:FaultEvent):void {
+				statusText.text = "Failed to connect to the server.";
+				setTimeout(function ():void {
+					retryButton.visible = true;
+				}, 1000);
+			}
+			
+			protected function retryJoin(e:MouseEvent):void {
+				statusText.text="Retrying connection...";
+				retryButton.visible = false;
+				SessionManager.instance.join();
+			}
+		]]>
+	</fx:Script>
+	
+	<s:Label id="statusText"
+			 text="Connecting..." />
+	
+	<s:VGroup horizontalAlign="center" width="100%">
+		<s:Button id="retryButton"
+				  label="Retry"
+				  visible="false"
+				  click="retryJoin(event)"/>
+	</s:VGroup>
+	
+</mx:TitleWindow>
