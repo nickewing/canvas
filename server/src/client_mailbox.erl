@@ -8,7 +8,7 @@
   init/1, handle_call/3, handle_cast/2,
   handle_info/2, terminate/2, code_change/3,
   %% Server interface
-  start_new/2, empty_lines/1, subscribe/1, unsubscribe/1, send_line/2
+  start_new/2, empty_lines/1, subscribe/2, unsubscribe/2, send_line/2
 ]).
 
 -include("canvas.hrl").
@@ -25,18 +25,16 @@
 
 start_new(CM, SID) ->
   gen_server:start_link(?MODULE, [CM, SID], []).
-%cast(MB, M) ->
-%  gen_server:cast(MB, M).
-call(MB, M) ->
-  gen_server:call(MB, M).
+cast(MB, M) ->
+  gen_server:cast(MB, M).
 empty_lines(MB) ->
-  call(MB, empty_lines).
-subscribe(MB) ->
-  call(MB, subscribe).
-unsubscribe(MB) ->
-  call(MB, unsubscribe).
+  cast(MB, empty_lines).
+subscribe(MB, Pid) ->
+  cast(MB, {subscribe, Pid}).
+unsubscribe(MB, Pid) ->
+  cast(MB, {unsubscribe, Pid}).
 send_line(MB, Line) ->
-  call(MB, Line).
+  cast(MB, Line).
 
 %%% gen_server Callbacks
 %%%%%%%%%%%%%%%%%%%%%%%%
@@ -50,11 +48,12 @@ init([CM, SID]) ->
 
 %% Invoked in response to gen_server:call
 %% Update last_update on all calls and then call update_call
-handle_call(Msg, From, S) ->
-  updated_call(Msg, From, set_last_update(S)).
+handle_call(_Message, _From, S) ->
+  {reply, error, S}.
 
 %% Invoked in response to gen_server:cast
-handle_cast(_Message, S) -> {noreply, S}.
+handle_cast(Message, S) ->
+  updated_cast(Message, set_last_update(S)).
 
 %% Handle other messages
 handle_info(kill_on_timeout, #state{last_update=Then, sid=SID, cm=CM} = S) ->
@@ -75,7 +74,8 @@ terminate(_Reason, #state{sid = SID}) ->
   ok.
 
 %% Server code update
-code_change(_OldVersion, S, _Extra) -> {ok, S}.
+code_change(_OldVersion, S, _Extra) ->
+  {ok, S}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -83,11 +83,11 @@ code_change(_OldVersion, S, _Extra) -> {ok, S}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% add a line to the list
-updated_call(#line{} = Line, {_Pid, _}, #state{lines = Lines} = S) ->
+updated_cast(#line{} = Line, #state{lines = Lines} = S) ->
   io:format("~w Client mailbox, got new line ~w~n", [self(), Line]),
-  {reply, ok, send_lines_to_listener(S#state{lines = [Line | Lines]})};
+  {noreply, send_lines_to_listener(S#state{lines = [Line | Lines]})};
 %% subscribe listener and send lines if any exist
-updated_call(subscribe, {NewListener, _}, #state{listener = Listener} = S) ->
+updated_cast({subscribe, NewListener}, #state{listener = Listener} = S) ->
   case Listener of
     L when L == undefined;
            L == NewListener -> % no old listener or it is the same
@@ -97,21 +97,21 @@ updated_call(subscribe, {NewListener, _}, #state{listener = Listener} = S) ->
       Listener ! unsubscribed
   end,
   io:format("~w subscribed ~w~n", [self(), NewListener]),
-  {reply, ok, send_lines_to_listener(S#state{listener = NewListener})};
+  {noreply, send_lines_to_listener(S#state{listener = NewListener})};
 %% unsubscribe listener
-updated_call(unsubscribe, {Pid, _}, #state{listener = Listener} = S)
+updated_cast({unsubscribe, Pid}, #state{listener = Listener} = S)
     when (Pid == Listener) ->
   io:format("~w unsubscribed ~w~n", [self(), Listener]),
-  {reply, ok, S#state{listener = undefined}};
-updated_call(unsubscribe, {_Pid, _}, S) ->
-  {reply, ok, S};
+  {noreply, S#state{listener = undefined}};
+updated_cast({unsubscribe, _Pid}, S) ->
+  {noreply, S};
 %% empty the list of lines
-updated_call(empty_lines, {Pid, _}, S) ->
-  io:format("~w was emptied by ~w~n", [self(), Pid]),
-  {reply, ok, S#state{lines = []}};
+updated_cast(empty_lines, S) ->
+  io:format("~w was emptied~n", [self()]),
+  {noreply, S#state{lines = []}};
 %% unknown message received
-updated_call(_Message, _From, S) ->
-  {reply, error, S}.
+updated_cast(_Message, S) ->
+  {noreply, S}.
 
 %% send line list to the listener
 send_lines_to_listener(#state{lines = Lines, listener = Listener} = S)

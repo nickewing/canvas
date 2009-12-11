@@ -36,9 +36,9 @@ list(CM) ->
 fetch_sid(CM, SID) ->
   call(CM, {fetch_sid, SID}).
 update_sid(CM, SID, Box, MailBox) ->
-  call(CM, {update_sid, SID, Box, MailBox}).
+  cast(CM, {update_sid, SID, Box, MailBox}).
 remove_sid(CM, SID) ->
-  call(CM, {remove_sid, SID}).
+  cast(CM, {remove_sid, SID}).
 filter_by_box(CM, Box) ->
   call(CM, {filter_by_box, Box}).
 
@@ -50,43 +50,45 @@ init([]) ->
   %process_flag(trap_exit, true),
   {ok, #state{clients = client_list:new()}}.
 
-%% Invoked in response to gen_server:call
-handle_call(new_sid, {_Pid, _}, S) ->
-  {SID, S1} = client_join(S),
-  {reply, {sid, SID}, S1};
-
+%% Generate a unique SID, create a new mailbox and add it to the client list
+handle_call(new_sid, {_Pid, _}, #state{clients = C} = S) ->
+  SID = generate_sid(C),
+  {reply, {sid, SID}, create_sid_client(SID, S)};
+%% Return the list of current clients
 handle_call(list, _From, #state{clients = C} = S) ->
   {reply, C, S};
-
+%% Fetch a client by SID
 handle_call({fetch_sid, SID}, _From, S) ->  
   #state{clients = C} = S1 = ensure_sid_exists(SID, S),
   {reply, client_list:fetch_sid(SID, C), S1};
-
-handle_call({update_sid, SID, Box, MailBox}, _From, #state{clients = C} = S) ->
-  {reply, ok, S#state{clients = client_list:save(SID, Box, MailBox, C)}};
-
-handle_call({remove_sid, SID}, _From, #state{clients = C} = S) ->
-  {reply, ok, S#state{clients = client_list:remove_sid(SID, C)}};
-
+%% Return clients in box
 handle_call({filter_by_box, Box}, _From, #state{clients = C} = S) ->
   {reply, client_list:filter_by_box(Box, C), S};
-
+%% Unknown message
 handle_call(_Message, _From, S) ->
   {reply, error, S}.
 
-%% Invoked in response to gen_server:cast
-handle_cast(_Message, S) -> {noreply, S}.
+%% Update a client by SID
+handle_cast({update_sid, SID, Box, MailBox}, #state{clients = C} = S) ->
+  {noreply, S#state{clients = client_list:save(SID, Box, MailBox, C)}};
+%% Remove a client by SID
+handle_cast({remove_sid, SID}, #state{clients = C} = S) ->
+  {noreply, S#state{clients = client_list:remove_sid(SID, C)}};
+%% Unknown message
+handle_cast(_Message, S) ->
+  {noreply, S}.
 
 %% Handle exit of linked processes
-% handle_info({'EXIT', Pid, _Reason}, S) ->
-%   {noreply, client_logoff(Pid, S)};
-handle_info(_Message, S) -> {noreply, S}.
+handle_info(_Message, S) ->
+  {noreply, S}.
 
 %% Server termination
-terminate(_Reason, _S) -> ok.
+terminate(_Reason, _S) ->
+  ok.
 
 %% Server code update
-code_change(_OldVersion, S, _Extra) -> {ok, S}.
+code_change(_OldVersion, S, _Extra) ->
+  {ok, S}.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -105,11 +107,6 @@ create_sid_client(SID, #state{clients = C} = S) ->
   {ok, MB} = client_mailbox:start_new(self(), SID),
   S#state{clients = client_list:save(SID, none, MB, C)}.
 
-%% Generate a unique SID, create a new mailbox and add it to the client list
-client_join(#state{clients = C} = S) ->
-  SID = generate_sid(C),
-  {SID, create_sid_client(SID, S)}.
-
 %% Generate a SID and make sure it doesn't already exist (although unlikely)
 generate_sid(Clients) ->
   random:seed(now()),
@@ -120,7 +117,3 @@ generate_sid(Clients) ->
     false ->
       SID
   end.
-
-
-
-

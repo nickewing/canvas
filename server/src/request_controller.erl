@@ -1,7 +1,10 @@
 -module(request_controller).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 
--export([route_request/2, join/2, update/2, send_line/2, send_line_worker/3]).
+-export([
+  route_request/2, join/2, update/2,
+  send_line/2, send_line_worker/3
+]).
 
 -include("canvas.hrl").
 -include("spatial.hrl").
@@ -78,7 +81,7 @@ fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
   io:format("~w Update box: ~p~n", [self(), NewBox]),
   io:format("~w Update tiles: ~p~n", [self(), Tiles]),
   {OldBox, Mailbox} = client_manager:fetch_sid(CM, SID),
-  client_mailbox:subscribe(Mailbox),
+  client_mailbox:subscribe(Mailbox, self()),
   Lines = case (NewBox == OldBox) of
             true ->
               io:format("~w Same box~n", [self()]),
@@ -91,7 +94,7 @@ fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
               %% Lines = line_store:fecth_lines...
               wait_for_lines(?line_wait_timeout)
           end,
-  client_mailbox:unsubscribe(Mailbox),
+  client_mailbox:unsubscribe(Mailbox, self()),
   Lines.
 
 wait_for_lines(Timeout) ->
