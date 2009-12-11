@@ -3,6 +3,7 @@
 -record(tile, {box, time}).
 -record(line, {points, size, color, user}).
 
+-record(s_state, {cm}).
 
 -define(server_port, 8000).
 

@@ -5,13 +5,15 @@
 
 -export([start/1, stop/0, loop/3]).
 
+-include("canvas.hrl").
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% External API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 start(Options) ->
-  client_manager:start(),
-  S = [],
+  {ok, CM} = client_manager:start(),
+  S = #s_state{cm = CM},
   {DocRoot, Options1} = get_option(docroot, Options),
   Loop =  fun (Req) ->
             ?MODULE:loop(Req, S, DocRoot)

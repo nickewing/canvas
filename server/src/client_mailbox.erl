@@ -8,13 +8,13 @@
   init/1, handle_call/3, handle_cast/2,
   handle_info/2, terminate/2, code_change/3,
   %% Server interface
-  start_new/1, empty_lines/1, subscribe/1, unsubscribe/1, send_line/2
+  start_new/2, empty_lines/1, subscribe/1, unsubscribe/1, send_line/2
 ]).
 
 -include("canvas.hrl").
 
 %% internal server state
--record(state, {sid, lines, last_update, listener}).
+-record(state, {sid, lines, last_update, listener, cm}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% External API
@@ -23,23 +23,30 @@
 %%% Server interface
 %%%%%%%%%%%%%%%%%%%%
 
-start_new(SID)  -> gen_server:start_link(?MODULE, [SID], []).
-%cast(MB, M)    -> gen_server:cast(MB, M).
-call(MB, M)     -> gen_server:call(MB, M).
-empty_lines(MB) -> call(MB, empty_lines).
-subscribe(MB)   -> call(MB, subscribe).
-unsubscribe(MB) -> call(MB, unsubscribe).
-send_line(MB, Line)  -> call(MB, Line).
+start_new(CM, SID) ->
+  gen_server:start_link(?MODULE, [CM, SID], []).
+%cast(MB, M) ->
+%  gen_server:cast(MB, M).
+call(MB, M) ->
+  gen_server:call(MB, M).
+empty_lines(MB) ->
+  call(MB, empty_lines).
+subscribe(MB) ->
+  call(MB, subscribe).
+unsubscribe(MB) ->
+  call(MB, unsubscribe).
+send_line(MB, Line) ->
+  call(MB, Line).
 
 %%% gen_server Callbacks
 %%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Called when a connection is made to the server
 
-init([SID]) ->
+init([CM, SID]) ->
   timer:send_interval(?mailbox_timeout_interval, kill_on_timeout),
   io:format("~w Client mailbox, ~s started.~n", [self(), SID]),
-  {ok, #state{sid = SID, lines = [], last_update = now()}}.
+  {ok, #state{sid = SID, lines = [], last_update = now(), cm = CM}}.
 
 %% Invoked in response to gen_server:call
 %% Update last_update on all calls and then call update_call
@@ -50,10 +57,10 @@ handle_call(Msg, From, S) ->
 handle_cast(_Message, S) -> {noreply, S}.
 
 %% Handle other messages
-handle_info(kill_on_timeout, #state{last_update = Then, sid = SID} = S) ->
+handle_info(kill_on_timeout, #state{last_update=Then, sid=SID, cm=CM} = S) ->
   S1 =  case timer:now_diff(now(), Then) of
           T when T > (?mailbox_timeout * 1000) ->
-            client_manager:remove_sid(SID),
+            client_manager:remove_sid(CM, SID),
             exit(normal);
           _ ->
             S

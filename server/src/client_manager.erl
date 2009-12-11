@@ -8,9 +8,9 @@
   init/1, handle_call/3, handle_cast/2,
   handle_info/2, terminate/2, code_change/3,
   %% Server interface
-  start/0, join/0, list/0,
-  fetch_sid/1, update_sid/3, remove_sid/1,
-  filter_by_box/1
+  start/0, new_sid/1, list/1,
+  fetch_sid/2, update_sid/4, remove_sid/2,
+  filter_by_box/2
 ]).
 
 -include("canvas.hrl").
@@ -23,15 +23,24 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Server interface
-start()     -> gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
-%cast(M)     -> gen_server:cast(?MODULE, M).
-call(M)     -> gen_server:call(?MODULE, M).
-join()      -> call(join).
-list()      -> call(list).
-fetch_sid(SID) -> call({fetch_sid, SID}).
-update_sid(SID, Box, MailBox) -> call({update_sid, SID, Box, MailBox}).
-remove_sid(SID) -> call({remove_sid, SID}).
-filter_by_box(Box) -> call({filter_by_box, Box}).
+start() ->
+  gen_server:start_link(?MODULE, [], []).
+cast(CM, M) ->
+  gen_server:cast(CM, M).
+call(CM, M) ->
+  gen_server:call(CM, M).
+new_sid(CM) ->
+  call(CM, new_sid).
+list(CM) ->
+  call(CM, list).
+fetch_sid(CM, SID) ->
+  call(CM, {fetch_sid, SID}).
+update_sid(CM, SID, Box, MailBox) ->
+  call(CM, {update_sid, SID, Box, MailBox}).
+remove_sid(CM, SID) ->
+  call(CM, {remove_sid, SID}).
+filter_by_box(CM, Box) ->
+  call(CM, {filter_by_box, Box}).
 
 %%% gen_server Callbacks
 
@@ -42,7 +51,7 @@ init([]) ->
   {ok, #state{clients = client_list:new()}}.
 
 %% Invoked in response to gen_server:call
-handle_call(join, {_Pid, _}, S) ->
+handle_call(new_sid, {_Pid, _}, S) ->
   {SID, S1} = client_join(S),
   {reply, {sid, SID}, S1};
 
@@ -93,12 +102,12 @@ ensure_sid_exists(SID, #state{clients = C} = S) ->
   end.
 
 create_sid_client(SID, #state{clients = C} = S) ->
-  {ok, MB} = client_mailbox:start_new(SID),
+  {ok, MB} = client_mailbox:start_new(self(), SID),
   S#state{clients = client_list:save(SID, none, MB, C)}.
 
 %% Generate a unique SID, create a new mailbox and add it to the client list
 client_join(#state{clients = C} = S) ->
-  SID      = generate_sid(C),
+  SID = generate_sid(C),
   {SID, create_sid_client(SID, S)}.
 
 %% Generate a SID and make sure it doesn't already exist (although unlikely)

@@ -35,10 +35,10 @@ route_request(Req, S) ->
   end.
 
 %% Distribute lines to mailboxes and line store
-send_line_worker(_S, #line{points = P} = Line, SenderSID) ->
+send_line_worker(#s_state{cm = CM}, #line{points = P} = Line, SenderSID) ->
   io:format("~w Worker got line: ~p from ~s~n", [self(), Line, SenderSID]),
   Box = spatial:points_box(P),
-  To  = lists:keydelete(SenderSID, 1, client_manager:filter_by_box(Box)),
+  To  = lists:keydelete(SenderSID, 1, client_manager:filter_by_box(CM, Box)),
   io:format("~w Worker sending line to: ~p~n", [self(), To]),
   % TODO: send line to linestore
   send_line_to_mailboxes(To, Line).
@@ -49,14 +49,14 @@ send_line_worker(_S, #line{points = P} = Line, SenderSID) ->
 
 %% Actions
 
-join(_Req, _S) ->
-  {sid, SID} = client_manager:join(),
+join(_Req, #s_state{cm = CM}) ->
+  {sid, SID} = client_manager:new_sid(CM),
   resp_ok(SID).
 
-update(Req, _S) ->
+update(Req, S) ->
   {SID, QS} = parse_qs_sid(Req),
   Tiles     = parse_tiles(proplists:get_value("t", QS)),
-  case fetch_updates(Tiles, SID) of
+  case fetch_updates(Tiles, SID, S) of
     Lines when is_list(Lines) ->
       resp_ok(lines_to_resp_str(Lines));
     cancel ->
@@ -73,11 +73,11 @@ send_line(Req, S) ->
 
 
 
-fetch_updates(Tiles, SID) ->
+fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
   NewBox = box_tiles(Tiles),
   io:format("~w Update box: ~p~n", [self(), NewBox]),
   io:format("~w Update tiles: ~p~n", [self(), Tiles]),
-  {OldBox, Mailbox} = client_manager:fetch_sid(SID),
+  {OldBox, Mailbox} = client_manager:fetch_sid(CM, SID),
   client_mailbox:subscribe(Mailbox),
   Lines = case (NewBox == OldBox) of
             true ->
@@ -85,7 +85,7 @@ fetch_updates(Tiles, SID) ->
               wait_for_lines(?line_wait_timeout);
             false ->
               io:format("~w Update sid ~s: ~p ~w~n", [self(), SID, NewBox, Mailbox]),
-              client_manager:update_sid(SID, NewBox, Mailbox),
+              client_manager:update_sid(CM, SID, NewBox, Mailbox),
               client_mailbox:empty_lines(Mailbox),
               %% TODO: fetch lines from linestore
               %% Lines = line_store:fecth_lines...
