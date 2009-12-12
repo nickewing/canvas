@@ -23,6 +23,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% Server interface
+%%%%%%%%%%%%%%%%%%%%
+
 start() ->
   gen_server:start_link(?MODULE, [], []).
 cast(CM, M) ->
@@ -43,6 +45,7 @@ filter_by_box(CM, Box) ->
   call(CM, {filter_by_box, Box}).
 
 %%% gen_server Callbacks
+%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Called when a connection is made to the server
 init([]) ->

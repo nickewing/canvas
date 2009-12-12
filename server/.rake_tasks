@@ -1,0 +1,7 @@
+clean
+clobber
+compile
+doc
+start
+start_dev
+test

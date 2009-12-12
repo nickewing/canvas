@@ -40,7 +40,9 @@ task :copy_app do
   APP.each do |f|
     dir = build_package_dir(f)
     filename = File.split(f).last
-    copy f, dir unless File.mtime(f) <= File.mtime(File.join(dir, filename))
+    ebin_app = File.join dir, filename
+    next unless File.exists? ebin_app
+    copy f, dir unless File.mtime(f) <= File.mtime(ebin_app)
   end
 end
 

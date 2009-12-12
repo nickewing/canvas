@@ -113,7 +113,8 @@ public class TileListenerManager extends EventDispatcher {
 	 * Reset the manager's connection to the server
 	 */
 	public function reset():void {
-		//updateService.cancel();
+		updateService.cancel();
+		updateService.disconnect();
 		makeRequest();
 	}
 	

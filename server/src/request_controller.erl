@@ -51,14 +51,15 @@ send_line_worker(#s_state{cm = CM}, #line{points = P} = Line, SenderSID) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Actions
+%%%%%%%%%%
 
 join(_Req, #s_state{cm = CM}) ->
   {sid, SID} = client_manager:new_sid(CM),
   resp_ok(SID).
 
 update(Req, S) ->
-  {SID, QS} = parse_qs_sid(Req),
-  Tiles     = parse_tiles(proplists:get_value("t", QS)),
+  {SID, Params} = parse_params_sid(Req),
+  Tiles     = parse_tiles(proplists:get_value("t", Params)),
   case fetch_updates(Tiles, SID, S) of
     Lines when is_list(Lines) ->
       resp_ok(lines_to_resp_str(Lines));
@@ -69,13 +70,15 @@ update(Req, S) ->
   end.
 
 send_line(Req, S) ->
-  {SID, QS} = parse_qs_sid(Req),
-  Line = add_line_user(Req, parse_line(proplists:get_value("l", QS))),
+  {SID, Params} = parse_params_sid(Req),
+  Line = add_line_user(Req, parse_line(proplists:get_value("l", Params))),
   spawn(?MODULE, send_line_worker, [S, Line, SID]),
   resp_ok().
 
+%% Misc Functions
+%%%%%%%%%%%%%%%%%
 
-
+%% Fetch updates for a set of tiles
 fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
   NewBox = box_tiles(Tiles),
   io:format("~w Update box: ~p~n", [self(), NewBox]),
@@ -97,6 +100,7 @@ fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
   client_mailbox:unsubscribe(Mailbox, self()),
   Lines.
 
+%% Wait for lines to be sent from mailbox
 wait_for_lines(Timeout) ->
   receive
     {lines, Lines, FromMailbox} ->
@@ -120,47 +124,50 @@ send_line_to_mailboxes([{_SID, Mailbox}|T], Line) ->
   client_mailbox:send_line(Mailbox, Line),
   send_line_to_mailboxes(T, Line).
 
-
+%% Map tiles to their boxes
 tiles_boxes(Tiles) ->
   lists:map(fun(#tile{box = B}) -> B end, Tiles).
 
+%% Calculate the bounding box for a set of tiles
 box_tiles(Tiles) ->
   spatial:boxes_box(tiles_boxes(Tiles)).
 
-
-
 %% Responses
+%%%%%%%%%%%%
 
+%% Build response for OK
 resp_ok() ->
   io:format("~w Response OK~n", [self()]),
   <<"OK">>.
 
-resp_cancelled() ->
-  io:format("~w Response CANCELLED~n", [self()]),
-  <<"CANCELLED">>.
-
+%% Build response for OK and a string
 resp_ok(Str) ->
   io:format("~w Response OK ~s ~n", [self(), Str]),
   list_to_binary("OK " ++ Str).
 
+%% Build response for CANCELLED
+resp_cancelled() ->
+  io:format("~w Response CANCELLED~n", [self()]),
+  <<"CANCELLED">>.
+
+%% Build response for TIMEOUT
 resp_timeout() ->
   io:format("~w Response TIMEOUT~n", [self()]),
   <<"TIMEOUT">>.
 
-
-
 %% Request Parsing
+%%%%%%%%%%%%%%%%%%
 
-parse_qs_sid(Req) ->
-  QS  = case Req:get(method) of
+parse_params_sid(Req) ->
+  Params  = case Req:get(method) of
     Method when Method =:= 'GET';
                 Method =:= 'HEAD' ->
       Req:parse_qs();
     'POST' ->
       Req:parse_post()
   end,
-  SID = proplists:get_value("sid", QS),
-  {SID, QS}.
+  SID = proplists:get_value("sid", Params),
+  {SID, Params}.
 
 %% parse tiles from tile request string.  Example tile str:
 %% 123,1234,3341,3412/123423334;4244,452,4523,45234/123412333
