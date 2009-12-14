@@ -1,107 +1,117 @@
 -module(line_store).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 
--export([
-  connect/0,
-  manager/2,
-  worker/1,
-  get_lines/3,
-  save_line/2,
-  box_to_db_str/1,
-  db_str_to_box_regex/0,
-  db_str_to_box/2
-]).
+-export([connect/0, disconnect/1, get_lines/3, save_line/2, test/0]).
 
 -include("spatial.hrl").
 -include("canvas.hrl").
 
--record(ls_conn, {db, manager}).
+-record(ls_conn, {db}).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% External API
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Connect to the database
 connect() ->
-  {ok, Db} = pgsql:connect(
-    ?ls_store_host,
-    ?ls_store_db,
-    ?ls_store_user,
-    ?ls_store_pass
-  ),
-  W0  = spawn(?MODULE, worker,  [Db]),
-  W1  = spawn(?MODULE, worker,  [Db]),
-  Man = spawn(?MODULE, manager, [[W0, W1], 0]),
-  #ls_conn{db = Db, manager = Man}.
+  {ok, Db} = pgsql:connect(?ls_host, ?ls_db, ?ls_user, ?ls_pass),
+  #ls_conn{db = Db}.
 
-manager(Workers, N) ->
-  receive
-    M -> lists:nth(N, Workers) ! M
-  end,
-  N1 = (N + 1) rem length(Workers),
-  manager(Workers, N1).
+disconnect(#ls_conn{db = Db}) ->
+  pgsql:terminate(Db).
 
-worker(Db) ->
-  receive
-    {save_line, L} -> save_line(Db, L)
-  end,
-  worker(Db).
+%% Get lines within Box and after T0
+get_lines(#ls_conn{db = Db}, Box, T0) ->
+  Query = string:join([
+            "SELECT *
+            FROM lines
+            WHERE ", box_to_db_str(Box) , " && bounding_box
+              AND time >= ", util:num_to_str(T0), "
+            ORDER BY time ASC"
+          ], ""),
+  {ok, [{_, _, Records}|_]} = pgsql:squery(Db, Query),
+  lists:map(fun record_to_line/1, Records).
 
+%% Save a line to the database
+save_line(#ls_conn{db = Db}, #line{points = Points, size = Size, box = Box,
+                                   color = Color, time = Time,
+                                   user = #user{ip = IP}} = L) ->
+  Query = string:join([
+            "INSERT INTO lines
+            (bounding_box, points, size, color, ip, time)
+            VALUES (",
+                    box_to_db_str(Box), ", '",
+                    points_to_db_str(Points), "', ",
+                    util:num_to_str(Size), ", ",
+                    util:num_to_str(Color), ", '",
+                    IP, "', ",
+                    util:num_to_str(Time),
+                  ")"
+          ], ""),
+  io:format("~w~n~p~n~s~n", [Db, L, Query]),
+  {ok, Res} = pgsql:squery(Db, Query),
+  io:format("~p~n", [Res]),
+  Res.
 
-get_lines(#ls_conn{db = Db}, Box, T0) -> 
-  %{ok, [{_, _, Data}|_]} = pgsql:pquery(
-  Data = pgsql:pquery(
-    Db,
-    "SELECT *
-    FROM coords
-    WHERE box '$1' && coord_box
-      AND time >= '$2';",
-    [box_to_db_str(Box), T0]
-  ),
-  Data.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Interal API
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-save_line(Db, #line{points = C, size = S, user = #user{ip_addr = IP}}) ->
-  {ok, _Res} = pgsql:pquery(
-    Db,
-    "INSERT INTO lines
-    (coords, size, color, ip_addr)
-    VALUES ($1, $2, $3, $4)",
-    [
-      points_to_db_str(C),
-      S,
-      C,
-      IP
-    ]
-  ).
+%%% Conversion functions
+%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% Convert a #box to a database box-type string
 box_to_db_str(#box{x = X, y = Y, x1 = X1, y1 = Y1}) ->
-  "((" ++ util:num_to_str(X) ++ "," ++ util:num_to_str(Y) ++
+  "box '((" ++ util:num_to_str(X) ++ "," ++ util:num_to_str(Y) ++
     "),(" ++ util:num_to_str(X1) ++ "," ++
-    util:num_to_str(Y1) ++ "))".
+    util:num_to_str(Y1) ++ "))'".
 
-
-
-db_str_to_box_regex() ->
-  {ok, R} = re:compile(
-    "\\(
-      ([0-9]+(\\.[0-9]+)?), ([0-9]+(\\.[0-9]+)?)
-    \\),\\(
-      ([0-9]+(\\.[0-9]+)?) , ([0-9]+(\\.[0-9]+)?)
-    \\)",
-    [extended]
-  ),
-  R.
-
-db_str_to_box(Str, CRegex) ->
-  {match, Ms} = re:run(Str, CRegex),
-  [_, {X00, X01}, _, {Y00, Y01}, _, {X10, X11}, _, {Y10, Y11}] = Ms,
-  X  = substr_to_num(Str, X00 + 1, X01),
-  Y  = substr_to_num(Str, Y00 + 1, Y01),
-  X1 = substr_to_num(Str, X10 + 1, X11),
-  Y1 = substr_to_num(Str, Y10 + 1, Y11),
+% Convert a database box-type string to a #box
+db_str_to_box(BinStr) ->
+  [X, Y, X1, Y1] = string:tokens(binary_to_list(BinStr), "(),"),
   #box{x = X, y = Y, x1 = X1, y1 = Y1}.
 
-substr_to_num(Str, Start, Len) ->
-  util:str_to_num(string:substr(Str, Start, Len)).
+%% Convert a list of points to a string for the database
+points_to_db_str(Points) ->
+  string:join(lists:map(fun util:num_to_str/1, Points), ",").
 
-points_to_db_str(Coords) ->
-  string:join(lists:map(fun point_to_str/1, Coords), ",").
+%% Convert a point string from the database to a list of points
+db_str_to_points(BinStr) ->
+  PointStrs = string:tokens(binary_to_list(BinStr), ","),
+  lists:map(fun util:str_to_num/1, PointStrs).
 
-point_to_str({X, Y}) ->
-  util:num_to_str(X) ++ "," ++ util:num_to_str(Y).
+%% Convert a result record from the database to a #line
+record_to_line([_Id, Box, Points, Color, Size, _IP, Time]) ->
+  #line{
+    box    = db_str_to_box(Box),
+    points = db_str_to_points(Points),
+    color  = Color,
+    size   = Size,
+    time   = Time
+  }.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Tests
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% FIXME: Tests
+
+test() -> 
+  Conn = connect(),
+  % L = #line{
+  %   points = [0,1,2,3,4,5],
+  %   size   = 3,
+  %   color  = 16777215,
+  %   time   = util:now_microseconds(),
+  %   box    = {box, 0, 1, 4, 5},
+  %   user   = #user{ip = "0.0.0.0"}
+  % },
+  % L = {line,[178,169.5,180,172.5,182,176.5,185,179.5,187,180.5,189,181.5,194,186.5,
+  %        196,187.5,198,188.5,199,188.5],
+  %       3,0,
+  %       {box,178,169.5,199,188.5},
+  %       1999706107239,
+  %       {user,"127.0.0.1"}},
+  % save_line(Conn, L).
+  Lines = get_lines(Conn, #box{x=-1000, y=-1000, x1=1000, y1=1000}, 0),
+  io:format("~p ~n", [Lines]).

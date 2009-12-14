@@ -15,7 +15,12 @@ public interface TileListener {
 	/**
 	 * Get time of last update received from server
 	 */
-	function get lastUpdate():Date;
+	function get lastUpdate():Number;
+	
+	/**
+	 * Set time of last update recieved from server
+	 */
+	function set lastUpdate(v:Number):void;
 	
 	//---------------------------------------------------------------------
 	//

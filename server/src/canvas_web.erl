@@ -13,7 +13,8 @@
 
 start(Options) ->
   {ok, CM} = client_manager:start(),
-  S = #s_state{cm = CM},
+  S = #s_state{cm = CM, ls = line_store:connect()},
+  io:format("~p~n", [S]),
   {DocRoot, Options1} = get_option(docroot, Options),
   Loop =  fun (Req) ->
             ?MODULE:loop(Req, S, DocRoot)

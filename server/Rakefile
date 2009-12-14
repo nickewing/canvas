@@ -69,5 +69,4 @@ task :doc => [:compile] do
   sh "cd doc && erl -noshell -run edoc files ../#{SRC.join(" ../")} -run init stop"
 end
 
-
 task :default => :compile

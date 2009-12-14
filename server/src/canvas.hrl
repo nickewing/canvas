@@ -1,9 +1,10 @@
 
--record(user, {ip_addr}).
+-record(user, {ip}).
 -record(tile, {box, time}).
--record(line, {points, size, color, user}).
 
--record(s_state, {cm}).
+-record(line, {points, size, color, box, time, user}).
+
+-record(s_state, {cm, ls}).
 
 -define(server_port, 8000).
 
@@ -13,7 +14,7 @@
 -define(mailbox_timeout_interval, 60000). % 1 minute
 
 %% Postgres db info
--define(ls_store_host,  "localhost").
--define(ls_store_db,    "mochi_test").
--define(ls_store_user,  "mochi_test").
--define(ls_store_pass,  "").
+-define(ls_host,  "localhost").
+-define(ls_db,    "canvas").
+-define(ls_user,  "canvas").
+-define(ls_pass,  "").

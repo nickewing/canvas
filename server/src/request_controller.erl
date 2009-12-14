@@ -38,13 +38,19 @@ route_request(Req, S) ->
   end.
 
 %% Distribute lines to mailboxes and line store
-send_line_worker(#s_state{cm = CM}, #line{points = P} = Line, SenderSID) ->
+send_line_worker(#s_state{cm = CM, ls = LS},
+                 #line{box = Box} = Line, SenderSID) ->
   io:format("~w Worker got line: ~p from ~s~n", [self(), Line, SenderSID]),
-  Box = spatial:points_box(P),
   To  = lists:keydelete(SenderSID, 1, client_manager:filter_by_box(CM, Box)),
   io:format("~w Worker sending line to: ~p~n", [self(), To]),
-  % TODO: send line to linestore
-  send_line_to_mailboxes(To, Line).
+  send_line_to_mailboxes(To, Line),
+  
+  % FIXME:
+  Conn = line_store:connect(),
+  line_store:save_line(Conn, Line),
+  line_store:disconnect(Conn),
+  
+  ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Internal API
@@ -62,7 +68,10 @@ update(Req, S) ->
   Tiles     = parse_tiles(proplists:get_value("t", Params)),
   case fetch_updates(Tiles, SID, S) of
     Lines when is_list(Lines) ->
-      resp_ok(lines_to_resp_str(Lines));
+      resp_ok(
+        util:num_to_str(util:now_microseconds()) ++ " " ++
+        lines_to_resp_str(Lines)
+      );
     cancel ->
       resp_cancelled();
     timeout ->
@@ -75,7 +84,7 @@ send_line(Req, S) ->
   spawn(?MODULE, send_line_worker, [S, Line, SID]),
   resp_ok().
 
-%% Misc Functions
+%% Helper Functions
 %%%%%%%%%%%%%%%%%
 
 %% Fetch updates for a set of tiles
@@ -90,15 +99,33 @@ fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
               io:format("~w Same box~n", [self()]),
               wait_for_lines(?line_wait_timeout);
             false ->
-              io:format("~w Update sid ~s: ~p ~w~n", [self(), SID, NewBox, Mailbox]),
+              io:format("~w Update sid ~s: ~p ~w~n",
+                        [self(), SID, NewBox, Mailbox]),
               client_manager:update_sid(CM, SID, NewBox, Mailbox),
               client_mailbox:empty_lines(Mailbox),
-              %% TODO: fetch lines from linestore
-              %% Lines = line_store:fecth_lines...
-              wait_for_lines(?line_wait_timeout)
+              
+              Conn = line_store:connect(),
+              Lines0 = fetch_ls_tiles_lines(Conn, Tiles),
+              line_store:disconnect(Conn),
+              
+              case wait_for_lines(0) of
+                Lines1 when is_list(Lines1) ->
+                  Lines0 ++ Lines1;
+                _ ->
+                  Lines0
+              end
           end,
   client_mailbox:unsubscribe(Mailbox, self()),
   Lines.
+
+fetch_ls_tiles_lines(Conn, Tiles) ->
+  Lines = lists:foldl(fun(Tile, List) ->
+    [fetch_ls_tile_lines(Conn, Tile)|List]
+  end, [], Tiles),
+  lists:flatten(Lines).
+
+fetch_ls_tile_lines(Conn, #tile{box = Box, time = Time}) ->
+  line_store:get_lines(Conn, Box, Time).
 
 %% Wait for lines to be sent from mailbox
 wait_for_lines(Timeout) ->
@@ -114,7 +141,7 @@ wait_for_lines(Timeout) ->
 
 %% Set user for line from request data
 add_line_user(Req, L) ->
-  L#line{user = Req:get(peer)}.
+  L#line{user = #user{ip = Req:get(peer)}}.
 
 % Send a line to a list of mailboxes
 send_line_to_mailboxes([], _Line) ->
@@ -195,10 +222,14 @@ parse_points(Str) ->
 %% parse a #line from a string in the format of "24,543,3242,545/DF992A/3"
 parse_line(Str) ->
   [PointStr, ColorStr, SizeStr] = string:tokens(Str, "/"),
-  Color   = util:str_to_num(ColorStr),
-  Size    = util:str_to_num(SizeStr),
   Points  = parse_points(PointStr),
-  #line{points = Points, color = Color, size = Size}.
+  #line{
+    points = Points,
+    color  = util:str_to_num(ColorStr),
+    size   = util:str_to_num(SizeStr),
+    time   = util:now_microseconds(),
+    box    = spatial:points_box(Points)
+  }.
 
 
 %% Response Building

@@ -1,8 +1,7 @@
 package com.canvas.dataIO {
 
-import flash.events.Event;
 import flash.events.EventDispatcher;
-	
+
 import mx.rpc.events.FaultEvent;
 import mx.rpc.events.ResultEvent;
 
@@ -121,14 +120,18 @@ public class TileListenerManager extends EventDispatcher {
 	/**
 	 * Update listeners with response lines
 	 */
-	protected function updateListeners(lines:Array):void {
-		trace("handing out lines");
+	protected function updateListeners(lastUpdate:Number, lines:Array):void {
+		for (var j:Number = 0; j < listeners.length; j++) {
+			(listeners[j] as TileListener).lastUpdate = lastUpdate;
+		}
+		
 		for (var i:Number = 0; i < lines.length; i++) {
-			for (var j:Number = 0; j < listeners.length; j++) {
+			for (j = 0; j < listeners.length; j++) {
 				var line:Line = lines[i] as Line;
 				var listener:TileListener = listeners[j] as TileListener;
-				if (line.box.intersects(listener.box))
+				if (line.box.intersects(listener.box)) {
 					listener.handleLine(line);
+				}
 			}
 		}
 	}
@@ -159,7 +162,7 @@ public class TileListenerManager extends EventDispatcher {
 			var listener:TileListener = listeners[i] as TileListener
 			tilesStrings.push(
 				listener.box.serialize() + "/" +
-				listener.lastUpdate.getTime().toString()
+				listener.lastUpdate.toString()
 			);
 		}
 		
@@ -183,8 +186,8 @@ public class TileListenerManager extends EventDispatcher {
 		var resultParts:Array = e.result.toString().split(" ");
 		switch (resultParts[0]) {
 		case "OK":
-			trace("Got lines: " + resultParts[1]);
-			updateListeners(Line.unserializeLineArray(resultParts[1]));
+			trace("Got lines (at " + resultParts[1] + "): " + resultParts[2]);
+			updateListeners(resultParts[1], Line.unserializeLineArray(resultParts[2]));
 			break;
 		case "TIMEOUT":
 			trace("timeout");

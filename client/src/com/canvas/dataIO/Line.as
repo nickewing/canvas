@@ -77,7 +77,7 @@ public class Line {
 		var lines:Array = [];
 		var lineStrings:Array = str.split(";");
 		for (var i:Number = 0; i < lineStrings.length; i++) {
-			var lineParts:Array = str.split("/");
+			var lineParts:Array = lineStrings[i].split("/");
 			var points:Array = lineParts[0].split(",");
 			
 			for (var j:Number = 0; j < points.length; j++) {

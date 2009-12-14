@@ -8,7 +8,9 @@
   str_to_num/1,
   num_to_str/1,
   to_hex/1,
-  hex_to_int/1
+  hex_to_int/1,
+  now_microseconds/0,
+  now_microseconds/1
 ]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -60,6 +62,14 @@ to_hex(N) ->
 hex_to_int(N) ->
   mochihex:to_int(N).
 
+%%% Time functions
+
+now_microseconds() ->
+  now_microseconds(now()).
+
+now_microseconds({Macro, Sec, Micro}) ->
+  Macro * 1000000000 + Sec * 1000000 + Micro.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -70,7 +80,7 @@ reducel_test() ->
   [In0H | In0T] = In0,
   [
     % should act the same as foldl with head and tail of input
-    ?assert(reducel(Fn0, In0) =:= lists:foldl(Fn0, In0H, In0T))
+    ?assertEqual(reducel(Fn0, In0), lists:foldl(Fn0, In0H, In0T))
   ].
 
 reducer_test() ->
@@ -80,19 +90,19 @@ reducer_test() ->
   In0T = lists:sublist(In0, length(In0) - 1),
   [
     % should act the same as foldl with last and everything before last of input
-    ?assert(reducer(Fn0, In0) =:= lists:foldr(Fn0, In0H, In0T))
+    ?assertEqual(reducer(Fn0, In0), lists:foldr(Fn0, In0H, In0T))
   ].
 
 str_to_term_test() ->
   [
     ?assertError(badarg, str_to_term("@#$%^&*")),
-    ?assert(str_to_term("2345.4") =:= 2345.4),
-    ?assert(str_to_term("2345") =:= 2345),
-    ?assert(str_to_term("abc") =:= abc),
-    ?assert(str_to_term("'TEST'") =:= 'TEST'),
-    ?assert(str_to_term("{abc, 1.2}") =:= {abc, 1.2}),
-    ?assert(str_to_term("[abc, 1.2]") =:= [abc, 1.2]),
-    ?assert(str_to_term("<<\"abc\">>") =:= <<"abc">>)
+    ?assertEqual(2345.4, str_to_term("2345.4")),
+    ?assertEqual(2345, str_to_term("2345")),
+    ?assertEqual(abc, str_to_term("abc")),
+    ?assertEqual('TEST', str_to_term("'TEST'")),
+    ?assertEqual({abc, 1.2}, str_to_term("{abc, 1.2}")),
+    ?assertEqual([abc, 1.2], str_to_term("[abc, 1.2]")),
+    ?assertEqual(<<"abc">>, str_to_term("<<\"abc\">>"))
   ].
 
 str_to_num_test() ->
@@ -101,46 +111,56 @@ str_to_num_test() ->
     ?assertError(badarg, str_to_num("")),
     ?assertError(badarg, str_to_num("abc")),
     ?assert(str_to_num("2345.4") =:= 2345.4),
-    ?assert(
+    ?assertEqual(
+      64573322145243523452345234535234523453425234,
       str_to_num("64573322145243523452345234535234523453425234")
-        =:= 64573322145243523452345234535234523453425234
     ),
-    ?assert(str_to_num("0") =:= 0),
-    ?assert(
+    ?assertEqual(0, str_to_num("0")),
+    ?assertEqual(
+      5.123412341234124e+21,
       str_to_num("5123412341234123412341.23")
-        =:= 5.123412341234124e+21
     )
   ].
 
 num_to_str_test() ->
   [
     ?assertError(badarg, num_to_str("abc")),
-    ?assert(num_to_str(5.0) =:= "5.0"),
-    ?assert(num_to_str(5) =:= "5"),
-    ?assert(
-      num_to_str(5123412341234123412341.23) =:= "5.123412341234124e+21"
+    ?assertEqual("0.1", num_to_str(0.1)),
+    ?assertEqual("5", num_to_str(5)),
+    ?assertEqual(
+      "5.123412341234124e+21",
+      num_to_str(5123412341234123412341.23)
     ),
-    ?assert(
+    ?assertEqual(
+      "5123412341234123412341234234234234234234",
       num_to_str(5123412341234123412341234234234234234234)
-        =:= "5123412341234123412341234234234234234234"
     )
   ].
 
 to_hex_test() ->
   [
     ?assertError(badarg, to_hex(10.3)),
-    ?assert(to_hex("") =:= []),
-    ?assert(to_hex("abc") =:= "616263"),
-    ?assert(to_hex(0) =:= "0"),
-    ?assert(to_hex(10) =:= "a"),
-    ?assert(to_hex(12341234123412341324) =:= "ab44df0c6fec024c")
+    ?assertEqual([], to_hex("")),
+    ?assertEqual("616263", to_hex("abc")),
+    ?assertEqual("0", to_hex(0)),
+    ?assertEqual("a", to_hex(10)),
+    ?assertEqual("ab44df0c6fec024c", to_hex(12341234123412341324))
   ].
 
 hex_to_int_test() ->
   [
     ?assertError(badarg, hex_to_int("test")),
     ?assertError(badarg, hex_to_int("")),
-    ?assert(hex_to_int("A") =:= 10),
-    ?assert(hex_to_int("AB44DF0C6FEC024C") =:= 12341234123412341324),
-    ?assert(hex_to_int("ab44df0c6fec024c") =:= 12341234123412341324)
+    ?assertEqual(10, hex_to_int("A")),
+    ?assertEqual(12341234123412341324, hex_to_int("AB44DF0C6FEC024C")),
+    ?assertEqual(12341234123412341324, hex_to_int("ab44df0c6fec024c"))
+  ].
+
+now_microseconds_test() ->
+  Now1 = now_microseconds(),
+  Now2 = now_microseconds(now()),
+  [
+    ?assertError(function_clause, now_microseconds(1234)),
+    % Now1 and Now2 are equal (within 5 microseconds)
+    ?assert((Now1 - Now2) =< 5)
   ].

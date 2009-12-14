@@ -18,7 +18,7 @@ public class CanvasTileListener implements TileListener {
 	/**
 	 * Time of last update from server
 	 */
-	protected var _lastUpdate:Date;
+	protected var _lastUpdate:Number;
 	
 	//---------------------------------------------------------------------
 	//
@@ -27,8 +27,7 @@ public class CanvasTileListener implements TileListener {
 	//---------------------------------------------------------------------
 	
 	public function CanvasTileListener(initTile:CanvasTile) {
-		_lastUpdate = new Date();
-		_lastUpdate.setTime(0);
+		_lastUpdate = 0;
 		tile = initTile;
 	}
 	
@@ -48,8 +47,15 @@ public class CanvasTileListener implements TileListener {
 	/**
 	 * Get last update from server
 	 */
-	public function get lastUpdate():Date {
+	public function get lastUpdate():Number {
 		return _lastUpdate;
+	}
+	
+	/**
+	 * Set time of last update recieved from server
+	 */
+	public function set lastUpdate(v:Number):void {
+		_lastUpdate = v;
 	}
 	
 	//---------------------------------------------------------------------
