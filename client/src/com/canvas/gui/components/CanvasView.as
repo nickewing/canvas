@@ -1,4 +1,4 @@
-package com.canvas.gui {
+package com.canvas.gui.components {
 
 import com.canvas.dataIO.Box;
 import com.canvas.dataIO.SendLineManager;
@@ -252,7 +252,6 @@ public class CanvasView extends Canvas {
 		if (!tiles[x][y]) {
 			var tile:CanvasTile = new CanvasTile();
 			tile.box = new Box(x, y, x + CanvasTile.SIZE, y + CanvasTile.SIZE);
-			tile.text = (x / CanvasTile.SIZE) + ", " + (y / CanvasTile.SIZE);
 			tile.width = tile.height = CanvasTile.SIZE;
 			addChild(tile);
 			tiles[x][y] = tile;

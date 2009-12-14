@@ -1,4 +1,4 @@
-package com.canvas.gui {
+package com.canvas.gui.components {
 
 import com.canvas.dataIO.Box;
 import com.canvas.dataIO.CanvasTileListener;
@@ -8,9 +8,11 @@ import flash.display.CapsStyle;
 import flash.display.JointStyle;
 import flash.display.LineScaleMode;
 
+import mx.core.UIComponent;
 import mx.containers.Canvas;
-import mx.controls.Label;
 import mx.events.FlexEvent;
+
+import spark.components.Label;
 
 /**
  * Tile in the canvas
@@ -53,6 +55,10 @@ public class CanvasTile extends Canvas {
 	 * Tile drawing canvas
 	 */
 	protected var canvas:Canvas = new Canvas();
+	/**
+	 * Shade overlay for disabled state
+	 */
+	protected var shade:Canvas = new Canvas();
 	
 	//---------------------------------------------------------------------
 	//
@@ -73,7 +79,7 @@ public class CanvasTile extends Canvas {
 		
 		addChild(coordLabel);
 		
-		addEventListener(FlexEvent.CREATION_COMPLETE, setupDrawingCanvas);
+		addEventListener(FlexEvent.INITIALIZE, setupDrawingCanvas);
 	}
 	
 	//---------------------------------------------------------------------
@@ -82,10 +88,11 @@ public class CanvasTile extends Canvas {
 	//
 	//---------------------------------------------------------------------
 	
-	public function set text(v:String):void { coordLabel.text = v; }
-	
 	public function get box():Box { return _box }
-	public function set box(v:Box):void { _box = v; }
+	public function set box(v:Box):void {
+		_box = v;
+		coordLabel.text = (box.x / CanvasTile.SIZE) + ", " + (box.y / CanvasTile.SIZE);
+	}
 	
 	public function set active(v:Boolean):void {
 		if (v == _active) return;
@@ -93,14 +100,20 @@ public class CanvasTile extends Canvas {
 		_active = visible = enabled = v;
 		
 		var manager:TileListenerManager = TileListenerManager.instance;
-		if (v)
+		if (v) {
 			manager.registerTileListener(listener);
-		else
+		} else {
 			manager.unregisterTileListener(listener);
+			shaded = true;
+		}
 	}
 	
 	public function get active():Boolean {
 		return _active;
+	}
+	
+	public function set shaded(v:Boolean):void {
+		shade.visible = v;
 	}
 	
 	//---------------------------------------------------------------------
@@ -113,14 +126,37 @@ public class CanvasTile extends Canvas {
 	 * Setup the drawing canvas on the tile
 	 */
 	protected function setupDrawingCanvas(e:FlexEvent):void {
-		canvas.x = 0;
-		canvas.y = 0;
-		canvas.width = width;
-		canvas.height = height;
-		canvas.setStyle("borderColor",		"#333333");
+		var canvasMask:UIComponent = new UIComponent();
+		
+		coordLabel.setStyle("paddingTop", 5);
+		coordLabel.setStyle("paddingLeft", 5);
+		
+		shade.x      = canvas.x      = 0;
+		shade.y      = canvas.y      = 0;
+		shade.width  = canvas.width  = width;
+		shade.height = canvas.height = height;
+		
+		// draw masking area for canvas
+		canvasMask.graphics.beginFill(0xFFFFFF, 1);
+		canvasMask.graphics.drawRect(-1, -1, width, height);
+		canvasMask.graphics.endFill();
+		
+		canvas.setStyle("borderColor",	"#333333");
 		canvas.setStyle("borderStyle", 	"solid");
-		canvas.setStyle("borderVisible",	"true");
+		canvas.setStyle("borderVisible","true");
+		canvas.verticalScrollPolicy = canvas.horizontalScrollPolicy = "off";
+		canvas.addChild(canvasMask);
+		canvas.mask = canvasMask;
 		addChild(canvas);
+		
+		shade.setStyle("backgroundColor", "0x000000");
+		shade.setStyle("backgroundAlpha", "0.2");
+		
+		var shadeLabel:Label = new Label();
+		shadeLabel.text = "Loading...";
+		shade.addChild(shadeLabel);
+		
+		addChild(shade);
 	}
 	
 	//---------------------------------------------------------------------

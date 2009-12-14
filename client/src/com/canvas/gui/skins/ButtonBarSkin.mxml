@@ -18,7 +18,7 @@
 	
 	<fx:Declarations>
 		<fx:Component id="middleButton">
-			<s:ButtonBarButton skinClass="com.canvas.gui.components.CustomButtonBarButtonSkin" />
+			<s:ButtonBarButton skinClass="com.canvas.gui.skins.ButtonBarButtonSkin" />
 		</fx:Component>
 	</fx:Declarations>
 	

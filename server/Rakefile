@@ -1,3 +1,5 @@
+# Ruby rake file for server specific tasks
+
 require 'rake'
 require 'rake/clean'
 

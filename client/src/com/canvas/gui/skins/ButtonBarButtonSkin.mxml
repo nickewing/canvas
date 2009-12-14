@@ -30,16 +30,11 @@
 			import mx.events.FlexEvent;
 			import spark.components.ButtonBarButton;
 			
-			protected function gr_creationComplete(e:FlexEvent):void {
-				var dataObj:Object = hostComponent.data;
-				img.source = dataObj.icon;
-				hostComponent.toolTip = dataObj.label;
-			}
-			
 			protected function creationComplete(e:FlexEvent):void {
 				var dataObj:Object = hostComponent.data;
 				img.source = dataObj.icon;
 				label.text = dataObj.label;
+				hostComponent.toolTip = dataObj.toolTip;
 			}
 			
 			/* Define the skin elements that should not be colorized. 

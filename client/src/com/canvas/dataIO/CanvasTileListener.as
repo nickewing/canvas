@@ -1,6 +1,6 @@
 package com.canvas.dataIO {
 
-import com.canvas.gui.CanvasTile;
+import com.canvas.gui.components.CanvasTile;
 
 public class CanvasTileListener implements TileListener {
 	
@@ -64,6 +64,8 @@ public class CanvasTileListener implements TileListener {
 	//
 	//---------------------------------------------------------------------
 	
+	
+	
 	/**
 	 * Handle new lines fetched from 
 	 */
@@ -78,6 +80,13 @@ public class CanvasTileListener implements TileListener {
 				line.brushSize
 			);
 		}
+	}
+	
+	/**
+	 * Done receiving lines
+	 */
+	public function doneHandlingLines():void {
+		tile.shaded = false;
 	}
 }
 

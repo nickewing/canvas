@@ -1,5 +1,5 @@
 {application, canvas,
- [{description, "canvas"},
+ [{description, "Canvas Server"},
   {vsn, "0.01"},
   {modules, [
     canvas,

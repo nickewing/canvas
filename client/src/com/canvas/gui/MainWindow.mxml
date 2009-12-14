@@ -9,7 +9,150 @@
 			   minHeight="500"
 			   backgroundColor="#EEEEEE"
 			   initialize="init(event)">
-	<fx:Script source="MainWindow.as" />
+	<fx:Script>
+		<![CDATA[
+			import com.canvas.gui.components.CanvasView;
+			import com.canvas.dataIO.TileListenerManager;
+			import flash.events.Event;
+			import flash.events.KeyboardEvent;
+			import mx.rpc.events.FaultEvent;
+			import mx.containers.TitleWindow;
+			import mx.managers.PopUpManager;
+			import spark.events.IndexChangeEvent;
+			
+			//---------------------------------------------------------------------
+			//
+			//  Constants
+			//
+			//---------------------------------------------------------------------
+			
+			/**
+			 * Minimum drawing line size allowed
+			 */
+			protected const MIN_LINE_SIZE:Number = 1;
+			/**
+			 * Maximum drawing line size allowed
+			 */
+			protected const MAX_LINE_SIZE:Number = 50;
+			/**
+			 * Initial drawing line size
+			 */
+			protected const INIT_LINE_SIZE:Number = 3;
+			
+			//---------------------------------------------------------------------
+			//
+			//  Methods: Event handling
+			//
+			//---------------------------------------------------------------------
+			
+			/**
+			 * Setup on initialization
+			 */
+			protected function init(e:Event):void {
+				showSessionWindow();
+				
+				TileListenerManager.instance.addEventListener(FaultEvent.FAULT, function (e:Event):void {
+					showReconnectWindow();
+				});
+				
+				parent.parent.addEventListener(KeyboardEvent.KEY_UP, keyPressed);
+			}
+			
+			/**
+			 * Key was pressed
+			 */
+			protected function keyPressed(e:KeyboardEvent):void {
+				switch (e.keyCode) {
+				case 80: // p
+					setMode(CanvasView.MODE_DRAWING);
+					break;
+				case 77: // m
+					setMode(CanvasView.MODE_PANNING);
+					break;
+				}
+			}
+			
+			/**
+			 * Handle line size input text change
+			 */
+			protected function lineSizeTextChange(e:Event):void {
+				var val:Number = parseInt(lineSizeInput.text);
+				
+				if (val >= MIN_LINE_SIZE && val <= MAX_LINE_SIZE) {
+					lineSize.value = val;
+				} else if (val > MAX_LINE_SIZE) {
+					lineSize.value = MAX_LINE_SIZE;
+				} else {
+					lineSize.value = MIN_LINE_SIZE;
+				}
+				
+				lineSizeInput.text = lineSize.value.toString();
+			}
+			
+			/**
+			 * Change mode based on ToggleButtonBar
+			 */
+			protected function changeMode(e:IndexChangeEvent):void {
+				switch (e.newIndex) {
+					case -1:
+						break;
+					case 0:
+						canvasView.mode = CanvasView.MODE_PANNING;
+						break;
+					case 1:
+						canvasView.mode = CanvasView.MODE_DRAWING;
+						break
+				}
+			}
+			
+			//---------------------------------------------------------------------
+			//
+			//  Methods
+			//
+			//---------------------------------------------------------------------
+			
+			/**
+			 * Open the session window
+			 */
+			protected function showSessionWindow():void {
+				var window:TitleWindow = PopUpManager.createPopUp(this, SessionWindow, true) as TitleWindow;
+				PopUpManager.centerPopUp(window);
+			}
+			
+			/**
+			 * Open reconnect window
+			 */
+			protected function showReconnectWindow():void {
+				var window:TitleWindow = PopUpManager.createPopUp(this, ReconnectWindow, true) as ReconnectWindow;
+				PopUpManager.centerPopUp(window);
+			}
+			
+			/**
+			 * Open jump window
+			 */
+			protected function showJumpWindow():void {
+				var window:TitleWindow = PopUpManager.createPopUp(this, JumpWindow, true) as TitleWindow;
+				(window as JumpWindow).canvasView = canvasView;
+				PopUpManager.centerPopUp(window);
+			}
+			
+			/**
+			 * Change mode and reflect change in the interface
+			 */
+			protected function setMode(v:Number):void {
+				switch (v) {
+					case CanvasView.MODE_PANNING:
+						modeSelector.selectedIndex = 0;
+						break;
+					case CanvasView.MODE_DRAWING:
+						modeSelector.selectedIndex = 1;
+						break;
+				}
+				
+				canvasView.mode = v;
+			}
+		]]>
+	</fx:Script>
 	
 	<s:VGroup width="100%"
 			  height="100%"
@@ -28,7 +171,7 @@
 				<s:VerticalLayout gap="2" />
 			</s:layout>
 			
-			<gui:CanvasView width="100%"
+			<components:CanvasView width="100%"
 							 height="100%"
 							 id="canvasView"
 							 drawingSize="{lineSize.value}"
@@ -43,19 +186,21 @@
 						  width="100%"
 						  verticalAlign="middle">
 					
-					<s:ButtonBar id="btnBar"
+					<s:ButtonBar id="modeSelector"
 								 requireSelection="true"
 								 horizontalCenter="0"
 								 verticalCenter="0"
 								 selectedIndex="1"
 								 change="changeMode(event)"
-								 skinClass="com.canvas.gui.skins.CustomButtonBarSkin">
+								 skinClass="com.canvas.gui.skins.ButtonBarSkin">
 						<s:dataProvider>
 							<s:ArrayList>
 								<fx:Object label="Move"
-										   icon="@Embed(source='assets/arrow_out.png')"/>
+										   icon="@Embed(source='assets/arrow_out.png')"
+										   toolTip="Move around the canvas (m)"/>
 								<fx:Object label="Paint"
-										   icon="@Embed(source='assets/paintbrush.png')"/>	
+										   icon="@Embed(source='assets/paintbrush.png')"
+										   toolTip="Paint on the canvas (p)"/>	
 							</s:ArrayList>
 						</s:dataProvider>
 					</s:ButtonBar>
@@ -95,7 +240,6 @@
 										   icon="@Embed(source='assets/shape_square_go.png')"
 										   skinClass="com.canvas.gui.skins.IconButtonSkin"
 										   toolTip="Jump to a tile" />
-					
 				</s:HGroup>
 			</mx:Canvas>
 		</s:Panel>

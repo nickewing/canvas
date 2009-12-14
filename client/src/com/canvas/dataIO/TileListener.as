@@ -32,6 +32,11 @@ public interface TileListener {
 	 * Handle new lines fetched from 
 	 */
 	function handleLine(lines:Line):void
+		
+	/**
+	 * Done receiving lines
+	 */
+	function doneHandlingLines():void
 }
 
 }

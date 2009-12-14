@@ -134,6 +134,10 @@ public class TileListenerManager extends EventDispatcher {
 				}
 			}
 		}
+		
+		for (j = 0; j < listeners.length; j++) {
+			(listeners[j] as TileListener).doneHandlingLines();
+		}
 	}
 	
 	/**
@@ -186,11 +190,11 @@ public class TileListenerManager extends EventDispatcher {
 		var resultParts:Array = e.result.toString().split(" ");
 		switch (resultParts[0]) {
 		case "OK":
-			trace("Got lines (at " + resultParts[1] + "): " + resultParts[2]);
+			//trace("Got lines (at " + resultParts[1] + "): " + resultParts[2]);
 			updateListeners(resultParts[1], Line.unserializeLineArray(resultParts[2]));
 			break;
 		case "TIMEOUT":
-			trace("timeout");
+			//trace("timeout");
 			break;
 		}
 	}

@@ -1,3 +1,5 @@
+# Ruby Capistrano file for deploying the app to a server.
+
 load 'deploy'
 
 set :application, 'nickewing.net'
