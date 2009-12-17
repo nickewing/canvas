@@ -43,8 +43,8 @@ task :copy_app do
     dir = build_package_dir(f)
     filename = File.split(f).last
     ebin_app = File.join dir, filename
-    next unless File.exists? ebin_app
-    copy f, dir unless File.mtime(f) <= File.mtime(ebin_app)
+    copy f, dir if not File.exists? ebin_app or
+                   File.mtime(f) > File.mtime(ebin_app)
   end
 end
 
