@@ -96,7 +96,7 @@ public class SendLineManager {
 	 * Send the serialized current line to the server
 	 */
 	protected function sendLine():void {
-		trace("sent line");
+		//trace("sent line");
 		sendLineService.send({
 			l: _currentLine.serialize()
 		});

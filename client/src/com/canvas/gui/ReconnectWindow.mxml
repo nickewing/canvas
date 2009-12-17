@@ -32,7 +32,7 @@
 			 * Retry connection and close
 			 */
 			protected function retryConnection(e:MouseEvent):void {
-				trace("TLM reset by ReconnectWindow");
+				//trace("TLM reset by ReconnectWindow");
 				TileListenerManager.instance.reset();
 				PopUpManager.removePopUp(this);
 			}

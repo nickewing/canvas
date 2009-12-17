@@ -22,15 +22,12 @@
 points_box([X|[Y|T]] = L) when (length(L) > 0) and (length(L) rem 2 == 0) ->
   {[Xr, Yr, X1r, Y1r], _} = lists:foldl(fun points_box/2, {[X, Y, X, Y], x}, T),
   #box{x = Xr, y = Yr, x1 = X1r, y1 = Y1r}.
-points_box(V, {[Xo, Yo, X1o, Y1o], Type}) ->
-  case Type of
-    x -> {[erlang:min(Xo,  V), Yo, erlang:max(X1o, V), Y1o], y};
-    y -> {[Xo, erlang:min(Yo,  V), X1o, erlang:max(Y1o, V)], x}
-  end.
 
 %% @doc Calculates the surrounding box for a list of boxes
 boxes_box(Boxes) ->
   util:reducel(fun boxes_box/2, Boxes).
+
+%% @doc Calculates the surrounding box for two boxes
 boxes_box(#box{x = X0, y = Y0, x1 = X01, y1 = Y01},
           #box{x = X1, y = Y1, x1 = X11, y1 = Y11}) ->
   #box{
@@ -52,7 +49,14 @@ boxes_intersect(B0, B1) ->
 %%% Internal API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc Determines if b0 is on b1, but not vice versa
+%% Folder for points_box/1
+points_box(V, {[Xo, Yo, X1o, Y1o], Type}) ->
+  case Type of
+    x -> {[erlang:min(Xo,  V), Yo, erlang:max(X1o, V), Y1o], y};
+    y -> {[Xo, erlang:min(Yo,  V), X1o, erlang:max(Y1o, V)], x}
+  end.
+
+%% Determines if b0 is on b1, but not vice versa
 box_on_box(#box{x = X0, y = Y0, x1 = X1, y1 = Y1} = _B0, B1) ->
   point_on_box(X0, Y0, B1) or % top left corner of b0 on b1
   point_on_box(X1, Y1, B1) or % bottom right corner of b0 on b1

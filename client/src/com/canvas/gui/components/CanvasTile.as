@@ -8,11 +8,13 @@ import flash.display.CapsStyle;
 import flash.display.JointStyle;
 import flash.display.LineScaleMode;
 
-import mx.core.UIComponent;
 import mx.containers.Canvas;
+import mx.core.UIComponent;
 import mx.events.FlexEvent;
 
+import spark.components.HGroup;
 import spark.components.Label;
+import spark.components.VGroup;
 
 /**
  * Tile in the canvas
@@ -154,7 +156,20 @@ public class CanvasTile extends Canvas {
 		
 		var shadeLabel:Label = new Label();
 		shadeLabel.text = "Loading...";
-		shade.addChild(shadeLabel);
+		
+		// center in vertical middle
+		var shadeGroup1:HGroup = new HGroup;
+		shadeGroup1.verticalAlign = "middle";
+		shadeGroup1.height = height;
+		shadeGroup1.addElement(shadeLabel);
+		
+		// center in horizontal center
+		var shadeGroup:VGroup = new VGroup;
+		shadeGroup.horizontalAlign = "center";
+		shadeGroup.width  = width;
+		shadeGroup.addElement(shadeGroup1);
+		
+		shade.addChild(shadeGroup);
 		
 		addChild(shade);
 	}

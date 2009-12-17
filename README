@@ -1,0 +1,151 @@
+  ____                          
+ / ___|__ _ _ ____   ____ _ ___ 
+| |   / _` | '_ \ \ / / _` / __|
+| |__| (_| | | | \ V / (_| \__ \
+ \____\__,_|_| |_|\_/ \__,_|___/
+  
+  Created by Nicholas E. Ewing <nick@nickewing.net>
+
+Overview
+========
+
+  Canvas is a collaborative drawing program that works through the use of one
+  server and multiple clients.  The canvas is semi infinite and is divided up
+  into tiles.  A user can move around the canvas and draw on the tiles.  Any
+  drawings from clients are distributed to other clients by the server.
+
+Requirements
+============
+  
+  Adobe Flash 10 Player
+    
+    To run the client in the browser, you must install Adobe Flash Player 10. It
+    can be downloaded from the following location:
+      
+      http://get.adobe.com/flashplayer/
+  
+  Adobe Flex / Adobe FlashBuilder Beta 2
+    
+    To build the client, you must have Adobe FlashBuilder Beta 2 and the Flex
+    framework version 4.0. A trial can be downloaded from the following
+    location:
+      
+      http://labs.adobe.com/technologies/flashbuilder4/
+  
+  Erlang OTP
+    
+    To build and run the server, Erlang OTP R13B02 or greateer must be
+    installed.  This can be obtained at the following location:
+      
+      http://erlang.org/download.html
+  
+  Ruby / Rake / Capistrano
+    
+    The server requires Ruby 1.8 and Ruby gems to run some of its project
+    management tasks.  Downloads and installation instructions can be found at
+    the following locations:
+    
+      http://www.ruby-lang.org/en/
+      http://docs.rubygems.org/
+    
+    The server depends on a two Ruby Gems.  The first is Rake, which is a Ruby
+    GNU-make-like task runner.  After installing Ruby and Ruby Gems, run the
+    following to install rake:
+    
+      sudo gem install rake
+    
+    The second Capistrano, which is used for deployment of projects to a web
+    server.  This is not required for the server to ran on the local machine. To
+    install Capistrano, run the following after installing Ruby and Ruby Gems:
+    
+      sudo gem install capistrano
+  
+  PostgreSQL
+    
+    The server uses a Postgres database to store its line information.  Version
+    8.3 or greater is required.  This can be obtained at the following address:
+      
+      http://www.postgresql.org/download/
+
+Building
+========
+  
+  Client
+    The client can be built through the FlashBuilder interface using the Run
+    button.
+    
+  Server
+    The server can be built using the following command while in the project's
+    server directory:
+    
+      rake
+    
+  Server Database
+    The server database can be created using the following commands located in
+    the postgres bin directory:
+      
+      createuser --superuser canvas -U postgres
+      createdb -U canvas canvas
+    
+    NOTE: The previous commands assume a user named 'postgres' exists and is the
+          machines main Posgres user.
+    
+    The database structure can be imported from the
+    server/priv/db/schema.sql file using the following command while in the main
+    project directory:
+    
+      psql -U canvas -d canvas -f server/priv/db/schema.sql 
+  
+Running
+=======
+
+  Client
+    The server can be run from the FlashBuilder interface or by running the HTML
+    file:
+      
+      client/bin-debug/MainWindow.html
+    
+  Server
+    The server can be ran using the following Ruby Rake task inside of the
+    project's server directory:
+      
+      rake start
+      
+Testing
+=======
+
+  Client
+    The client's tests are written in the FlexUnit4 unit testing framework.  
+    They can be ran through the FlashBuilder interface.
+  
+  Server
+    The server's tests are written using Erlang's unit testing framework, EUnit.
+    To run the server tests, navigate to the projects server directory and run
+    "rake test" (see requirements for more information on Ruby Rake).
+  
+Directory Structure
+===================
+
+NOTE: Client side naming conventions governed by standard Flex project layout.
+Server side naming conventions governed by standard Erlang application
+layout and Mochiweb framework.
+
+/                             Root directory
+  client/                     Client implementation
+    assets/                   Assets used by client
+    bin-debug/                Complied client code
+    html-template/            Template to build client HTML off
+    libs/                     Required Libraries for client
+    src/                      Client Source code
+  server/                     Server implementation
+    deps/                     Server dependencies
+      mochiweb-src/           MochiWeb web framework
+      pgsql/                  Postgresql Erlang bindings
+    doc/                      Generated documenation for server
+    ebin/                     Compiled server Erlang binaries
+    include/                  Included libraries
+    priv/                     Misc. server assets
+      db/                                 Database schema information
+      www/                                Public HTTP root directory
+        client -> /client/html-template   Link to client
+    src/                                  Server source code

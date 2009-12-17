@@ -12,7 +12,7 @@ public class ServerService extends HTTPService {
 	/**
 	 * Server's host name
 	 */
-	protected const SERVER_HOST:String = "localhost";
+	protected const SERVER_HOST:String = "canvas.nickewing.net";
 	
 	/**
 	 * Port of server

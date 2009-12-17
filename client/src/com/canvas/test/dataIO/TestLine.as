@@ -39,7 +39,7 @@ public class TestLine {
 		line.brushSize = 20;
 		line.paintColor = 10039704;
 		
-		Assert.assertEquals("-10,0,100.1,50.99/993198/20", line.serialize());
+		Assert.assertEquals("-10,0,100.1,50.99/10039704/20", line.serialize());
 	}
 }
 

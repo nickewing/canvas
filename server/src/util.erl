@@ -21,14 +21,17 @@
 
 %%% List functions
 
+%% @doc Reduce list left
 reducel(Fn, [H|T]) ->
   lists:foldl(Fn, H, T).
 
+%% @doc Reduce list right
 reducer(Fn, L) ->
   lists:foldr(Fn, lists:last(L), lists:sublist(L, length(L) - 1)).
 
 %%% Conversion functions
 
+%% @doc Convert string to term
 str_to_term(Str) when is_list(Str) and (length(Str) > 0) ->
   case erl_scan:string(Str ++ ".") of
     {ok, T, _} ->
@@ -44,6 +47,7 @@ str_to_term(Str) when is_list(Str) and (length(Str) > 0) ->
 str_to_term(_) ->
   erlang:error(badarg).
 
+%% @doc Convert string to number
 str_to_num(Str) when is_list(Str) and (length(Str) > 0) ->
   case str_to_term(Str) of
     T when is_float(T) or is_integer(T) ->
@@ -54,19 +58,25 @@ str_to_num(Str) when is_list(Str) and (length(Str) > 0) ->
 str_to_num(_) ->
   erlang:error(badarg).
 
-num_to_str(X) -> mochinum:digits(X).
+%% @doc Convert number to string
+num_to_str(X) ->
+  mochinum:digits(X).
 
+%% @doc Convert term to hex
 to_hex(N) ->
   mochihex:to_hex(N).
 
+%% @doc Convert hex to integer
 hex_to_int(N) ->
   mochihex:to_int(N).
 
 %%% Time functions
 
+%% @doc Return now() in microseconds
 now_microseconds() ->
   now_microseconds(now()).
 
+%% @doc Return given now() format time in microseconds
 now_microseconds({Macro, Sec, Micro}) ->
   Macro * 1000000000 + Sec * 1000000 + Micro.
 

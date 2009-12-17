@@ -1,10 +1,11 @@
 -module(line_store).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 
--export([connect/0, disconnect/1, get_lines/3, save_line/2, test/0]).
+-export([connect/0, disconnect/1, get_lines/3, save_line/2]).
 
 -include("spatial.hrl").
 -include("canvas.hrl").
+-include_lib("eunit/include/eunit.hrl").
 
 -record(ls_conn, {db}).
 
@@ -12,7 +13,7 @@
 %%% External API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% Connect to the database
+%% @doc Connect to the database
 connect() ->
   {ok, Db} = pgsql:connect(?ls_host, ?ls_db, ?ls_user, ?ls_pass),
   #ls_conn{db = Db}.
@@ -20,7 +21,7 @@ connect() ->
 disconnect(#ls_conn{db = Db}) ->
   pgsql:terminate(Db).
 
-%% Get lines within Box and after T0
+%% @doc Get lines within Box and after T0
 get_lines(#ls_conn{db = Db}, Box, T0) ->
   Query = string:join([
             "SELECT *
@@ -32,10 +33,10 @@ get_lines(#ls_conn{db = Db}, Box, T0) ->
   {ok, [{_, _, Records}|_]} = pgsql:squery(Db, Query),
   lists:map(fun record_to_line/1, Records).
 
-%% Save a line to the database
+%% @doc Save a line to the database
 save_line(#ls_conn{db = Db}, #line{points = Points, size = Size, box = Box,
                                    color = Color, time = Time,
-                                   user = #user{ip = IP}} = L) ->
+                                   user = #user{ip = IP}}) ->
   Query = string:join([
             "INSERT INTO lines
             (bounding_box, points, size, color, ip, time)
@@ -48,9 +49,9 @@ save_line(#ls_conn{db = Db}, #line{points = Points, size = Size, box = Box,
                     util:num_to_str(Time),
                   ")"
           ], ""),
-  io:format("~w~n~p~n~s~n", [Db, L, Query]),
+  %io:format("~w~n~p~n~s~n", [Db, L, Query]),
   {ok, Res} = pgsql:squery(Db, Query),
-  io:format("~p~n", [Res]),
+  %io:format("~p~n", [Res]),
   Res.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -68,7 +69,8 @@ box_to_db_str(#box{x = X, y = Y, x1 = X1, y1 = Y1}) ->
 
 % Convert a database box-type string to a #box
 db_str_to_box(BinStr) ->
-  [X, Y, X1, Y1] = string:tokens(binary_to_list(BinStr), "(),"),
+  [X, Y, X1, Y1] = lists:map(fun util:str_to_num/1, 
+                             string:tokens(binary_to_list(BinStr), "(),")),
   #box{x = X, y = Y, x1 = X1, y1 = Y1}.
 
 %% Convert a list of points to a string for the database
@@ -94,24 +96,66 @@ record_to_line([_Id, Box, Points, Color, Size, _IP, Time]) ->
 %%% Tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% FIXME: Tests
-
-test() -> 
+%% Tests connect/0 and disconnect/1
+connection_test() ->
   Conn = connect(),
-  % L = #line{
-  %   points = [0,1,2,3,4,5],
-  %   size   = 3,
-  %   color  = 16777215,
-  %   time   = util:now_microseconds(),
-  %   box    = {box, 0, 1, 4, 5},
-  %   user   = #user{ip = "0.0.0.0"}
-  % },
-  % L = {line,[178,169.5,180,172.5,182,176.5,185,179.5,187,180.5,189,181.5,194,186.5,
-  %        196,187.5,198,188.5,199,188.5],
-  %       3,0,
-  %       {box,178,169.5,199,188.5},
-  %       1999706107239,
-  %       {user,"127.0.0.1"}},
-  % save_line(Conn, L).
-  Lines = get_lines(Conn, #box{x=-1000, y=-1000, x1=1000, y1=1000}, 0),
-  io:format("~p ~n", [Lines]).
+  [
+    ?assertMatch(#ls_conn{db = _Db}, Conn),
+    ?assertEqual(ok, disconnect(Conn))
+  ].
+
+%% Tests save_line/2 and get_lines/3
+store_test() ->
+  Now  = util:now_microseconds(),
+  Conn = connect(),
+  L = #line{
+    points = [-9000000,-9000001,-9000010,-9000011,-9000012,-9000013],
+    size   = 3,
+    color  = 16777215,
+    time   = Now,
+    box    = {box, -9000000,-9000001,-9000012,-9000013},
+    user   = #user{ip = "0.0.0.0"}
+  },
+  save_line(Conn, L),
+  ?assertMatch(
+    [
+      #line{
+        points = [-9000000,-9000001,-9000010,-9000011,-9000012,-9000013],
+        size   = 3,
+        color  = 16777215,
+        time   = Now,
+        box    = {box, -9000000,-9000001,-9000012,-9000013}
+      }
+    ],
+    get_lines(Conn, {box, -9000000,-9000001,-9000012,-9000013},
+              Now - 5000) % 5 milliseconds ago
+  ).
+
+box_to_db_str_test() ->
+  ?assertEqual("box '((178,169.5),(199,188.5))'",
+               box_to_db_str(#box{x = 178, y = 169.5, x1 = 199, y1 = 188.5})).
+
+db_str_to_box_test() ->
+  ?assertEqual(#box{x = 178, y = 169.5, x1 = 199, y1 = 188.5},
+               db_str_to_box(<<"((178,169.5),(199,188.5))">>)).
+
+points_to_db_str_test() ->
+  ?assertEqual("178,169.5,199,188.5",
+               points_to_db_str([178,169.5,199,188.5])).
+
+db_str_to_points_test() ->
+  ?assertEqual([178,169.5,199,188.5],
+               db_str_to_points(<<"178,169.5,199,188.5">>)).
+
+record_to_list_test() ->
+  ?assertMatch(
+    #line{
+      box    = #box{x = 178, y = 169.5, x1 = 199, y1 = 188.5},
+      points = [178, 169.5, 199, 188.5],
+      color  = 0,
+      size   = 3,
+      time   = 12242333344
+    },
+    record_to_line([3, <<"((178,169.5),(199,188.5))">>,
+                    <<"178,169.5,199,188.5">>, 0, 3, "0.0.0.0", 12242333344])
+  ).

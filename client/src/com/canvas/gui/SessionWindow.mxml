@@ -27,7 +27,6 @@
 			}
 			
 			protected function sessionJoined(e:Event):void {
-				trace("session joined handler");
 				TileListenerManager.instance.enabled = true;
 				PopUpManager.removePopUp(this);
 			}

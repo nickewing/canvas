@@ -18,7 +18,7 @@ test_app_modules([H|T] = Apps) when is_list(Apps) ->
   test_app_modules(H),
   test_app_modules(T);
 test_app_modules(App) ->
-  io:format("~n~nTesting modules in ~w...~n~n", [App]),
+  io:format("~n~nTesting modules in ~w application...~n~n", [App]),
   application:load(App),
   case application:get_key(App, modules) of
     {ok, Mods} ->
@@ -41,7 +41,7 @@ test_module(M) ->
 %%% Internal API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% @doc Run test if they exist on given module
+%% Run test if they exist on given module
 try_to_test_module(M) ->
   code:load_file(M),
   case erlang:function_exported(M, test, 0) of

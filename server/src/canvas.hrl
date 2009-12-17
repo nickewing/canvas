@@ -1,20 +1,33 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Server Configuration
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
--record(user, {ip}).
--record(tile, {box, time}).
-
--record(line, {points, size, color, box, time, user}).
-
--record(s_state, {cm, ls}).
-
+% Port to run server on
 -define(server_port, 8000).
 
--define(line_wait_timeout, 20000). % 20 seconds
+% Time to wait until timing out on /update request
+-define(update_request_timeout, 20000). % 20 seconds
 
--define(mailbox_timeout, 300000). % 5 minutes
--define(mailbox_timeout_interval, 60000). % 1 minute
+% Client mailbox inactivity timeout
+-define(mb_timeout, 300000). % 5 minutes
+% Interval to check for mailbox timeout
+-define(mb_timeout_interval, 60000). % 1 minute
 
-%% Postgres db info
+%% Postgres database connection settings
 -define(ls_host,  "localhost").
 -define(ls_db,    "canvas").
 -define(ls_user,  "canvas").
 -define(ls_pass,  "").
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Records
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% User information
+-record(user, {ip}).
+% Tile information
+-record(tile, {box, time}).
+% Line information
+-record(line, {points, size, color, box, time, user}).
+% Server state
+-record(s_state, {cm}).

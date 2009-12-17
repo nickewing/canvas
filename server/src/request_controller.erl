@@ -14,6 +14,7 @@
 %%% External API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%% @doc Route a request to an action based on its requesting path
 route_request(Req, S) ->
   "/" ++ Path = Req:get(path),
   io:format("~w Routing ~w ~s~n", [self(), Req:get(method), Req:get(path)]),
@@ -37,35 +38,32 @@ route_request(Req, S) ->
       no_route
   end.
 
-%% Distribute lines to mailboxes and line store
-send_line_worker(#s_state{cm = CM, ls = LS},
+%% @doc Distribute lines to mailboxes and line store
+send_line_worker(#s_state{cm = CM},
                  #line{box = Box} = Line, SenderSID) ->
-  io:format("~w Worker got line: ~p from ~s~n", [self(), Line, SenderSID]),
+  %io:format("~w Worker got line: ~p from ~s~n", [self(), Line, SenderSID]),
   To  = lists:keydelete(SenderSID, 1, client_manager:filter_by_box(CM, Box)),
-  io:format("~w Worker sending line to: ~p~n", [self(), To]),
+  %io:format("~w Worker sending line to: ~p~n", [self(), To]),
   send_line_to_mailboxes(To, Line),
   
-  % FIXME:
   Conn = line_store:connect(),
   line_store:save_line(Conn, Line),
   line_store:disconnect(Conn),
   
   ok.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Internal API
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %% Actions
 %%%%%%%%%%
 
+%% @doc /join action: User joins the system and gets a SID
 join(_Req, #s_state{cm = CM}) ->
   {sid, SID} = client_manager:new_sid(CM),
   resp_ok(SID).
 
+%% @doc /update action: User is requesting lines
 update(Req, S) ->
   {SID, Params} = parse_params_sid(Req),
-  Tiles     = parse_tiles(proplists:get_value("t", Params)),
+  Tiles         = parse_tiles(proplists:get_value("t", Params)),
   case fetch_updates(Tiles, SID, S) of
     Lines when is_list(Lines) ->
       resp_ok(
@@ -78,29 +76,34 @@ update(Req, S) ->
       resp_timeout()
   end.
 
+%% @doc /send_line action: User is sending a line
 send_line(Req, S) ->
   {SID, Params} = parse_params_sid(Req),
   Line = add_line_user(Req, parse_line(proplists:get_value("l", Params))),
   spawn(?MODULE, send_line_worker, [S, Line, SID]),
   resp_ok().
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Internal API
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% Helper Functions
-%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%
 
 %% Fetch updates for a set of tiles
 fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
   NewBox = box_tiles(Tiles),
-  io:format("~w Update box: ~p~n", [self(), NewBox]),
-  io:format("~w Update tiles: ~p~n", [self(), Tiles]),
+  %io:format("~w Update box: ~p~n", [self(), NewBox]),
+  %io:format("~w Update tiles: ~p~n", [self(), Tiles]),
   {OldBox, Mailbox} = client_manager:fetch_sid(CM, SID),
   client_mailbox:subscribe(Mailbox, self()),
   Lines = case (NewBox == OldBox) of
             true ->
-              io:format("~w Same box~n", [self()]),
-              wait_for_lines(?line_wait_timeout);
+              %io:format("~w Same box~n", [self()]),
+              wait_for_lines(?update_request_timeout);
             false ->
-              io:format("~w Update sid ~s: ~p ~w~n",
-                        [self(), SID, NewBox, Mailbox]),
+              %io:format("~w Update sid ~s: ~p ~w~n",
+              %          [self(), SID, NewBox, Mailbox]),
               client_manager:update_sid(CM, SID, NewBox, Mailbox),
               client_mailbox:empty_lines(Mailbox),
               
@@ -118,12 +121,14 @@ fetch_updates(Tiles, SID, #s_state{cm = CM}) ->
   client_mailbox:unsubscribe(Mailbox, self()),
   Lines.
 
+%% Fetch lines from line_store for all requested tiles
 fetch_ls_tiles_lines(Conn, Tiles) ->
   Lines = lists:foldl(fun(Tile, List) ->
     [fetch_ls_tile_lines(Conn, Tile)|List]
   end, [], Tiles),
   lists:flatten(Lines).
 
+%% Fetch lines from line_store for requested tile 
 fetch_ls_tile_lines(Conn, #tile{box = Box, time = Time}) ->
   line_store:get_lines(Conn, Box, Time).
 
@@ -143,7 +148,7 @@ wait_for_lines(Timeout) ->
 add_line_user(Req, L) ->
   L#line{user = #user{ip = Req:get(peer)}}.
 
-% Send a line to a list of mailboxes
+%% Send a line to a list of mailboxes
 send_line_to_mailboxes([], _Line) ->
   ok;
 send_line_to_mailboxes([{_SID, Mailbox}|T], Line) ->
@@ -159,32 +164,10 @@ tiles_boxes(Tiles) ->
 box_tiles(Tiles) ->
   spatial:boxes_box(tiles_boxes(Tiles)).
 
-%% Responses
-%%%%%%%%%%%%
-
-%% Build response for OK
-resp_ok() ->
-  io:format("~w Response OK~n", [self()]),
-  <<"OK">>.
-
-%% Build response for OK and a string
-resp_ok(Str) ->
-  io:format("~w Response OK ~s ~n", [self(), Str]),
-  list_to_binary("OK " ++ Str).
-
-%% Build response for CANCELLED
-resp_cancelled() ->
-  io:format("~w Response CANCELLED~n", [self()]),
-  <<"CANCELLED">>.
-
-%% Build response for TIMEOUT
-resp_timeout() ->
-  io:format("~w Response TIMEOUT~n", [self()]),
-  <<"TIMEOUT">>.
-
 %% Request Parsing
 %%%%%%%%%%%%%%%%%%
 
+%% Parse out SID and params from either query string or post data
 parse_params_sid(Req) ->
   Params  = case Req:get(method) of
     Method when Method =:= 'GET';
@@ -233,10 +216,33 @@ parse_line(Str) ->
 
 
 %% Response Building
+%%%%%%%%%%%%%%%%%%%%
 
+%% Build response for OK
+resp_ok() ->
+  %io:format("~w Response OK~n", [self()]),
+  <<"OK">>.
+
+%% Build response for OK and a string
+resp_ok(Str) ->
+  %io:format("~w Response OK ~s ~n", [self(), Str]),
+  list_to_binary("OK " ++ Str).
+
+%% Build response for CANCELLED
+resp_cancelled() ->
+  %io:format("~w Response CANCELLED~n", [self()]),
+  <<"CANCELLED">>.
+
+%% Build response for TIMEOUT
+resp_timeout() ->
+  %io:format("~w Response TIMEOUT~n", [self()]),
+  <<"TIMEOUT">>.
+
+%% Serialize a list of lines to a response string
 lines_to_resp_str(Lines) ->
   string:join(lists:map(fun line_to_resp_str/1, Lines), ";").
 
+%% Serialize a line to a response string
 line_to_resp_str(#line{points = P, size = S, color = C}) ->
   string:join([
     points_to_resp_str(P),
@@ -244,6 +250,7 @@ line_to_resp_str(#line{points = P, size = S, color = C}) ->
     util:num_to_str(S)
   ], "/").
 
+%% Serialize a list of points to a response string
 points_to_resp_str(Points)
     when (length(Points) > 0) and (length(Points) rem 2 == 0) ->
   string:join(lists:map(fun util:num_to_str/1, Points), ",").
@@ -254,6 +261,33 @@ points_to_resp_str(Points)
 
 %% FIXME: Incomplete tests
 
+
+response_tests() ->
+  [
+    ?assertEqual("TIMEOUT", resp_timeout()),
+    ?assertEqual("CANCELLED", resp_cancelled()),
+    ?assertEqual("OK response", resp_ok("response")),
+    ?assertEqual("OK", resp_ok())
+  ].
+
+parse_tiles_test() ->
+  [
+    ?assertEqual(
+      [
+        #tile{box = #box{x=123,y=1234,x1=3341,y1=3412}, time = 123423334},
+        #tile{box = #box{x=4244,y=452,x1=4523,y1=45234}, time = 123412333}
+      ],
+      parse_tiles("123,1234,3341,3412/123423334;4244,452,4523,45234/123412333")
+    )
+  ].
+
+parse_tile_test() ->
+  [
+    ?assertEqual(
+      #tile{box = #box{x=123,y=1234,x1=3341,y1=3412}, time = 123423334},
+      parse_tile("123,1234,3341,3412/123423334")
+    )
+  ].
 
 parse_points_test() ->
   [
@@ -266,9 +300,20 @@ parse_points_test() ->
 
 parse_line_test() ->
   [
-    ?assertEqual(
+    ?assertMatch(
       #line{points = [24,543,3242,545], size = 3, color = 14653738},
-      parse_points("24,543,3242,545/14653738/3")
+      parse_line("24,543,3242,545/14653738/3")
+    )
+  ].
+
+lines_to_resp_str_test() ->
+  [
+    ?assertEqual(
+      "24,543,3242,545/14653738/3;-20,40/0/30",
+      lines_to_resp_str([
+        #line{points = [24,543,3242,545], size = 3, color = 14653738},
+        #line{points = [-20,40], size = 30, color = 0}
+      ])
     )
   ].
 

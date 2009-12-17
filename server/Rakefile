@@ -63,7 +63,7 @@ end
 
 desc "Run unit tests" 
 task :test => [:compile] do
-  sh "#{ERL_RUN} -s #{TEST_MODULE} test_app_modules canvas -run init stop -noshell"
+  sh "#{ERL_RUN} -s #{TEST_MODULE} test_app_modules canvas -run init stop -noshell -DTEST"
 end
 
 desc "Generate documentation"

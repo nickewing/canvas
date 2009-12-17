@@ -78,7 +78,7 @@ public class TileListenerManager extends EventDispatcher {
 	public function set enabled(v:Boolean):void {
 		_enabled = v;
 		if (v) {
-			trace("TLM reset by enable");
+			//trace("TLM reset by enable");
 			reset();
 		}
 	}
@@ -150,7 +150,7 @@ public class TileListenerManager extends EventDispatcher {
 		
 		if (!tileStr.length) return;
 		
-		trace("new update request");
+		//trace("new update request");
 		updateService.send({
 			t: tileStr
 		});

@@ -155,7 +155,6 @@ public class CanvasView extends Canvas {
 	protected function resize(e:Event):void {
 		box.x1 = box.x + width;
 		box.y1 = box.y + height;
-		trace("resize");
 		
 		if (!hasBeenResized) {
 			setLocation(0, 0);
