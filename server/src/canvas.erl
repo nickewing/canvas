@@ -1,7 +1,7 @@
 -module(canvas).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 
--export([start/0, stop/0]).
+-export([start/0, stop/0, stop/1]).
 
 ensure_started(App) ->
   case application:start(App) of
@@ -24,6 +24,17 @@ stop() ->
   Res = application:stop(canvas),
   application:stop(crypto),
   Res.
+
+stop([Node]) ->
+  io:format("Stop:~p~n",[Node]),
+  case net_adm:ping(Node) of
+    pong -> ok;
+    pang ->
+      io:format("There is no node with this name~n")
+  end,
+  rpc:cast(Node, init, stop, []),
+  init:stop().
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests
