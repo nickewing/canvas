@@ -5,7 +5,8 @@ require 'rake/clean'
 
 # Configuration
 START_MODULE = "canvas"
-TEST_MODULE = "test_runner"
+TEST_MODULE  = "test_runner"
+NODE_NAME    = "canvas001"
 
 
 # No Need to change
@@ -56,9 +57,15 @@ task :dev_start => [:compile] do
   sh "#{ERL_RUN} -boot start_sasl -s reloader -s #{START_MODULE}"
 end
 
-desc "Start"
+desc "Start daemon"
 task :start => [:compile] do
-  sh "#{ERL_RUN} -boot start_sasl -s #{START_MODULE}"
+  sh "#{ERL_RUN} -boot start_sasl -s #{START_MODULE} -detached -sname #{NODE_NAME}"
+end
+
+desc "Stop daemon"
+task :stop => [:compile] do
+  host = `hostname -a`
+  sh "#{ERL_RUN} -s #{START_MODULE} stop #{NODE_NAME}@#{host} -sname daemon_stopper"
 end
 
 desc "Run unit tests" 
