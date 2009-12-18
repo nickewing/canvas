@@ -5,7 +5,9 @@
  \____\__,_|_| |_|\_/ \__,_|___/
   
   Created by Nicholas E. Ewing <nick@nickewing.net>
-
+  
+  Copyright 2009 Nicholas E. Ewing
+  
 Overview
 ========
 
@@ -13,6 +15,8 @@ Overview
   server and multiple clients.  The canvas is semi infinite and is divided up
   into tiles.  A user can move around the canvas and draw on the tiles.  Any
   drawings from clients are distributed to other clients by the server.
+  
+  The project is now hosted at http://canvas.nickewing.net
 
 Requirements
 ============
@@ -112,7 +116,7 @@ Building
   
 Running
 =======
-
+  
   Client
     The server can be run from the FlashBuilder interface or by running the HTML
     file:
@@ -124,7 +128,12 @@ Running
     project's server directory:
       
       rake start
-      
+  
+  
+  NOTE: If unable to run the program for any reason, please see
+        http://canvas.nickewing.net for a compiled and running client and
+        server.
+  
 Testing
 =======
 
@@ -163,3 +172,8 @@ layout and Mochiweb framework.
       www/                                Public HTTP root directory
         client -> /client/html-template   Link to client
     src/                                  Server source code
+
+Trouble Shooting
+================
+  
+  Please contact me at nick@nickewing.net
