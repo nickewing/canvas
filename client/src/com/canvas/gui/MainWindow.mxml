@@ -203,7 +203,7 @@
 								 requireSelection="true"
 								 horizontalCenter="0"
 								 verticalCenter="0"
-								 selectedIndex="1"
+								 selectedIndex="0"
 								 change="changeMode(event)"
 								 skinClass="com.canvas.gui.skins.ButtonBarSkin">
 						<s:dataProvider>
