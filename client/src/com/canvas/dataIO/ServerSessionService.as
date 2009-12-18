@@ -1,7 +1,11 @@
 package com.canvas.dataIO {
 
 import mx.rpc.AsyncToken;
-	
+
+/**
+ * Wrapper for all sever requests after connected to a session.
+ * Automatically includes session id in requests.
+ */
 public class ServerSessionService extends ServerService {
 	//---------------------------------------------------------------------
 	//

@@ -5,6 +5,14 @@
 <fx:Script>
 	<![CDATA[
 
+			import com.canvas.test.dataIO.TestServerService;
+
+			private var com_canvas_test_dataIO_ServerService_obj:com.canvas.test.dataIO.TestServerService;
+	]]>
+</fx:Script>	
+<fx:Script>
+	<![CDATA[
+
 			import com.canvas.test.dataIO.TestLine;
 
 			private var com_canvas_test_dataIO_TestLine_obj:com.canvas.test.dataIO.TestLine;

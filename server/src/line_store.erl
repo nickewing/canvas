@@ -1,3 +1,9 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Line Store
+%%      See 3.1.2.2 Database in SRS
+
 -module(line_store).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 

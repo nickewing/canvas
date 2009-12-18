@@ -4,7 +4,7 @@ import com.canvas.dataIO.Box;
 import flexunit.framework.Assert;
 
 public class TestBox {
-	private var box:Box;
+	protected var box:Box;
 	
 	[Before]
 	public function runBeforeEach():void {

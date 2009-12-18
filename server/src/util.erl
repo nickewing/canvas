@@ -1,3 +1,8 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Misc. utilities
+
 -module(util).
 -author('Nick Ewing <nick@nickewing.net>').
 

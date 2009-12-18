@@ -1,7 +1,7 @@
-%% @author author <author@example.com>
-%% @copyright YYYY author.
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
 
-%% @doc Supervisor for the canvas application.
+%% @doc Supervisor for the canvas server application.
 
 -module(canvas_sup).
 -author('Nicholas E. Ewing <nick@nickewing.net>').

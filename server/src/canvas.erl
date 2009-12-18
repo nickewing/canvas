@@ -1,3 +1,9 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Canvas server application runner
+%%      See 3.1.2 in the SRS
+
 -module(canvas).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 

@@ -1,4 +1,7 @@
-%%% Spatial functions
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Spatial functions
 
 -module(spatial).
 -author('Nicholas E. Ewing <nick@nickewing.net>').

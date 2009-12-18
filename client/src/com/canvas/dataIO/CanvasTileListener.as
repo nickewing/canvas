@@ -2,6 +2,12 @@ package com.canvas.dataIO {
 
 import com.canvas.gui.components.CanvasTile;
 
+/**
+ * TileListener concretion for CanvasTile
+ * Receives incoming lines and draws them to its CanvasTile
+ * 
+ * Part of SRS 3.2.10 Requesting New Drawings from the Server
+ */
 public class CanvasTileListener implements TileListener {
 	
 	//---------------------------------------------------------------------

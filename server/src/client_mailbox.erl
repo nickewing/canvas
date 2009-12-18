@@ -1,3 +1,8 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Client mailbox, holds client session lines
+
 -module(client_mailbox).
 -author('Nick Ewing <nick@nickewing.net>').
 

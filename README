@@ -67,6 +67,20 @@ Requirements
       
       http://www.postgresql.org/download/
 
+Dependencies
+============
+
+  The server depends on the use of two third party libraries, both of which are
+  provided with this distribution: 
+    
+    MochiWeb web framework:
+      
+      http://code.google.com/p/mochiweb/
+    
+    PGSQL Erlang Postgres driver library:
+      
+      http://frihjul.net/pgsql
+    
 Building
 ========
   

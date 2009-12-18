@@ -2,6 +2,10 @@ package com.canvas.dataIO {
 	
 import mx.rpc.http.HTTPService;
 
+/**
+ * Wrapper for all server requests 
+ */
+
 public class ServerService extends HTTPService {
 	//---------------------------------------------------------------------
 	//
@@ -12,12 +16,12 @@ public class ServerService extends HTTPService {
 	/**
 	 * Server's host name
 	 */
-	protected const SERVER_HOST:String = "canvas.nickewing.net";
+	public const SERVER_HOST:String = "canvas.nickewing.net";
 	
 	/**
 	 * Port of server
 	 */
-	protected const SERVER_PORT:Number = 8000;
+	public const SERVER_PORT:Number = 80;
 	
 	//---------------------------------------------------------------------
 	//

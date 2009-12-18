@@ -1,3 +1,11 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Request Controller, routes and handles incoming requests
+%%      See in SRS: 3.1.2.3 Input Handler
+%%                  3.2.11 Receiving New Drawings from Clients
+%%                  3.2.12 Issuing Change Sets to Clients
+
 -module(request_controller).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 

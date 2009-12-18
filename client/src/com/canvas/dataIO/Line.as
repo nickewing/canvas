@@ -1,5 +1,8 @@
 package com.canvas.dataIO {
 
+/**
+ * Holds information for one line
+ */
 public class Line {
 	//---------------------------------------------------------------------
 	//

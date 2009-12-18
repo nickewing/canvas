@@ -12,6 +12,10 @@ import mx.events.FlexEvent;
 
 /**
  * Loads and displays tiles, allows for panning of and drawing on tiles
+ * 
+ * See SRS	3.1.1.1 Drawing Canvas
+ * 			3.1.1.2 Drawing Tool
+ * 			3.1.1.3 Panning Tool
  */
 public class CanvasView extends Canvas {
 	
@@ -312,7 +316,7 @@ public class CanvasView extends Canvas {
 		
 		if (!tileArrayEqual(currentTiles, newTiles)) {
 			// Reset the connection with the server since tiles were updated
-			trace("TLM reset by CanvasView 2");
+			//trace("TLM reset by CanvasView 2");
 			TileListenerManager.instance.reset();
 		}
 		

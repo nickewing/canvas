@@ -4,7 +4,13 @@ import flash.events.TimerEvent;
 import flash.utils.Timer;
 
 import mx.rpc.events.FaultEvent;
-	
+
+/**
+ * SendLineManager, manages the periodic sending of lines to the server during drawing
+ * 
+ * See in SRS:	3.1.1.7 Request Manager
+ * 				3.2.9 Sending Drawings to the Server
+ */
 public class SendLineManager {
 	//---------------------------------------------------------------------
 	//

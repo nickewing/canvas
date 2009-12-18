@@ -1,5 +1,5 @@
-%% @author author <author@example.com>
-%% @copyright YYYY author.
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
 
 %% @doc Callbacks for the canvas application.
 

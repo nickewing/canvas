@@ -1,3 +1,9 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Client Manager, manages client list
+%%      See 3.1.2.4 Client Manager in SRS
+
 -module(client_manager).
 -author('Nick Ewing <nick@nickewing.net>').
 

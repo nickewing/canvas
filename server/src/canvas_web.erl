@@ -1,4 +1,8 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
 %% @doc Web server for canvas.
+%%      See 3.1.2.1 HTTP Interface in SRS
 
 -module(canvas_web).
 -author('Nicholas E. Ewing <nick@nickewing.net>').

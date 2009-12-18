@@ -6,6 +6,14 @@ import flash.events.EventDispatcher;
 import mx.rpc.events.FaultEvent;
 import mx.rpc.events.ResultEvent;
 
+/**
+ * Manages client session
+ * 
+ * See in SRS:	3.1.1.7 Request Manager
+ * 				3.2.1 Joining the System
+ * 				3.2.2 Leaving the System
+ */
+
 public class SessionManager extends EventDispatcher {
 	//---------------------------------------------------------------------
 	//

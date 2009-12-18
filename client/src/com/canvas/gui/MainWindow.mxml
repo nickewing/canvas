@@ -9,6 +9,13 @@
 			   minHeight="500"
 			   backgroundColor="#EEEEEE"
 			   initialize="init(event)">
+	
+	<!--
+		Main client window
+		
+		See below for SRS references
+	-->
+	
 	<fx:Script>
 		<![CDATA[
 			import com.canvas.gui.components.CanvasView;
@@ -186,6 +193,12 @@
 						  width="100%"
 						  verticalAlign="middle">
 					
+					<!--
+					See SRS	3.1.1.2 Drawing Tool
+							3.1.1.3 Panning Tool
+							3.2.3 Changing to Drawing Mode
+							3.2.4 Changing to Panning Mode
+					-->
 					<s:ButtonBar id="modeSelector"
 								 requireSelection="true"
 								 horizontalCenter="0"
@@ -205,11 +218,18 @@
 						</s:dataProvider>
 					</s:ButtonBar>
 					
+					<!--
+					See SRS	3.1.1.4 Paint Color
+							3.1.1.5 Brush Size
+							3.2.7 Changing Paint Color
+							3.2.8 Changing Brush Size
+					-->
+					
 					<s:HGroup gap="0"
 							  verticalAlign="middle">
 						<mx:Label text="Paint Color: " />
 						<mx:ColorPicker id="colorPicker"
-										change="canvasView.mode = CanvasView.MODE_DRAWING" />
+										change="setMode(CanvasView.MODE_DRAWING)" />
 					</s:HGroup>
 					<s:HGroup gap="0"
 							  verticalAlign="middle">
@@ -229,7 +249,7 @@
 									   maximum="{MAX_LINE_SIZE}"
 									   value="{INIT_LINE_SIZE}"
 									   height="{lineSizeInput.height}"
-									   change="canvasView.mode = CanvasView.MODE_DRAWING" />
+									   change="setMode(CanvasView.MODE_DRAWING)" />
 						</s:HGroup>
 					</s:HGroup>
 					

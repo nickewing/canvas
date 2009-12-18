@@ -4,6 +4,7 @@
 <testsuite name="com.canvas.test:MainSuite" type="testsuiteclass"/>
 <testsuite name="com.canvas.test.dataIO:TestBox" type="testcaseclass"/>
 <testsuite name="com.canvas.test.dataIO:TestLine" type="testcaseclass"/>
+<testsuite name="com.canvas.test.dataIO:TestServerService" type="testcaseclass"/>
 <testsuite name="com.canvas.test.dataIO:TestTileListenerManager" type="testcaseclass"/>
 </testsuite>
 </testrun>

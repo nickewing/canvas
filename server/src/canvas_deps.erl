@@ -1,3 +1,6 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
 %% @doc Ensure that the relatively-installed dependencies are on the code
 %%      loading path, and locate resources relative
 %%      to this application's path.

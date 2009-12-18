@@ -18,6 +18,8 @@ import spark.components.VGroup;
 
 /**
  * Tile in the canvas
+ * 
+ * Part of SRS requirement 3.1.1.1 Drawing Canvas
  */
 public class CanvasTile extends Canvas {
 	//---------------------------------------------------------------------
@@ -93,7 +95,7 @@ public class CanvasTile extends Canvas {
 	public function get box():Box { return _box }
 	public function set box(v:Box):void {
 		_box = v;
-		coordLabel.text = (box.x / CanvasTile.SIZE) + ", " + (box.y / CanvasTile.SIZE);
+		coordLabel.text = (box.x / CanvasTile.SIZE) + ", " + (-box.y / CanvasTile.SIZE);
 	}
 	
 	public function set active(v:Boolean):void {

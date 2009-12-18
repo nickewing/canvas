@@ -1,5 +1,11 @@
 package com.canvas.dataIO {
 
+/**
+ * Generic tile listener interface for use with TileListenerManager
+ * Receives lines from manager and keeps track of a last updated time
+ * 
+ * Part of SRS 3.2.10 Requesting New Drawings from the Server
+ */
 public interface TileListener {
 	//---------------------------------------------------------------------
 	//

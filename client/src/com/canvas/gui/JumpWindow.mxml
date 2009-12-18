@@ -48,8 +48,8 @@
 			}
 			
 			protected function jump():void {
-				var jumpX:Number = constrainJumpCoord(jumpXInput.text);
-				var jumpY:Number = constrainJumpCoord(jumpYInput.text);
+				var jumpX:Number =   constrainJumpCoord(jumpXInput.text);
+				var jumpY:Number = - constrainJumpCoord(jumpYInput.text);
 				
 				_canvasView.jumpToTile(jumpX, jumpY);
 				

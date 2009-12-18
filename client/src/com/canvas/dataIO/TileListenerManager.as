@@ -5,6 +5,14 @@ import flash.events.EventDispatcher;
 import mx.rpc.events.FaultEvent;
 import mx.rpc.events.ResultEvent;
 
+/**
+ * Holds a list of TileListeners and constantly polls server for new line
+ * data.  Upon receiving new line data, updates are sent to the listeners
+ * 
+ * See in SRS:	3.1.1.7 Request Manager
+ * 				3.2.10 Requesting New Drawings from the Server
+ */
+
 public class TileListenerManager extends EventDispatcher {
 	
 	//---------------------------------------------------------------------

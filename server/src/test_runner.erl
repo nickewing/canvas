@@ -1,3 +1,8 @@
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Generic module test runner
+
 -module(test_runner).
 -author('Nick Ewing <nick@nickewing.net>').
 

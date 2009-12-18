@@ -1,6 +1,9 @@
-%%% Client list abtraction
-%%%   Currently only support O(n) operations, but should not matter as the lists
-%%%   wont tend to have too many entries.  Will optimize if needed.
+%% @author Nick Ewing <nick@nickewing.net>
+%% @copyright 2009 Nick Ewing.
+
+%% @doc Client list abtraction
+%%      Currently only support O(n) operations, but should not matter as the
+%%      lists wont tend to have too many entries.  Will optimize if needed.
 
 -module(client_list).
 -author('Nick Ewing <nick@nickewing.net>').
