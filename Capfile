@@ -32,16 +32,17 @@ namespace :deploy do
   end
   
   task :start, :roles => :app do
-    #run "touch #{current_release}/tmp/restart.txt"
+    run "cd #{latest_release}/server/; rake start"
   end
 
   task :stop, :roles => :app do
-    # Do nothing.
+    run "cd #{latest_release}/server/; rake stop"
   end
 
   desc "Restart Application"
   task :restart, :roles => :app do
-    #run "touch #{current_release}/tmp/restart.txt"
+    stop
+    start
   end
   
 end
