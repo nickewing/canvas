@@ -64,7 +64,7 @@ end
 
 desc "Stop daemon"
 task :stop => [:compile] do
-  host = `hostname -a`.chomp
+  host = `hostname -s`.chomp
   sh "#{ERL_RUN} -s #{START_MODULE} stop #{NODE_NAME}@#{host} -sname daemon_stopper -noshell"
 end
 

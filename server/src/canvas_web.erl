@@ -41,7 +41,13 @@ loop(Req, S, DocRoot) ->
       case request_controller:route_request(Req, S) of
         no_route ->
           "/" ++ Path = Req:get(path),
-          Req:serve_file(Path, DocRoot);
+          case Path of
+            "" ->
+              io:format("~s~n", [?default_www_path]),
+              Req:respond({302, [{"Location", ?default_www_path}], ""});
+            _ ->
+              Req:serve_file(Path, DocRoot)
+          end;
         Resp ->
           Resp
       end;

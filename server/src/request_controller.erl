@@ -262,7 +262,7 @@ points_to_resp_str(Points)
 %% FIXME: Incomplete tests
 
 
-response_tests() ->
+response_test() ->
   [
     ?assertEqual("TIMEOUT", resp_timeout()),
     ?assertEqual("CANCELLED", resp_cancelled()),
