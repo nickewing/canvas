@@ -15,7 +15,11 @@
   to_hex/1,
   hex_to_int/1,
   now_microseconds/0,
-  now_microseconds/1
+  now_microseconds/1,
+  now_milliseconds/0,
+  now_milliseconds/1,
+  now_seconds/0,
+  now_seconds/1
 ]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -25,6 +29,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %%% List functions
+%%%%%%%%%%%%%%%%%%
 
 %% @doc Reduce list left
 reducel(Fn, [H|T]) ->
@@ -35,6 +40,7 @@ reducer(Fn, L) ->
   lists:foldr(Fn, lists:last(L), lists:sublist(L, length(L) - 1)).
 
 %%% Conversion functions
+%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% @doc Convert string to term
 str_to_term(Str) when is_list(Str) and (length(Str) > 0) ->
@@ -76,6 +82,7 @@ hex_to_int(N) ->
   mochihex:to_int(N).
 
 %%% Time functions
+%%%%%%%%%%%%%%%%%%
 
 %% @doc Return now() in microseconds
 now_microseconds() ->
@@ -83,7 +90,24 @@ now_microseconds() ->
 
 %% @doc Return given now() format time in microseconds
 now_microseconds({Macro, Sec, Micro}) ->
-  Macro * 1000000000 + Sec * 1000000 + Micro.
+  (Macro * 1000000 + Sec) * 1000000 + Micro.
+
+%% @doc Return now() in milliseconds
+now_milliseconds() ->
+  now_milliseconds(now()).
+
+%% @doc Return given now() format time in milliseconds
+now_milliseconds({Macro, Sec, Micro}) ->
+  (Macro * 1000000 + Sec) * 1000 + (Micro div 1000).
+
+%% @doc Return now() in seconds
+now_seconds() ->
+  now_seconds(now()).
+
+%% @doc Return given now() in seconds
+now_seconds({Macro, Sec, _Micro}) ->
+  Macro * 1000000 + Sec.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests
