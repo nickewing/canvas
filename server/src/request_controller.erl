@@ -272,10 +272,10 @@ points_to_resp_str(Points)
 
 response_test() ->
   [
-    ?assertEqual("TIMEOUT", resp_timeout()),
-    ?assertEqual("CANCELLED", resp_cancelled()),
-    ?assertEqual("OK response", resp_ok("response")),
-    ?assertEqual("OK", resp_ok())
+    ?assertEqual(<<"TIMEOUT">>, resp_timeout()),
+    ?assertEqual(<<"CANCELLED">>, resp_cancelled()),
+    ?assertEqual(<<"OK response">>, resp_ok("response")),
+    ?assertEqual(<<"OK">>, resp_ok())
   ].
 
 parse_tiles_test() ->

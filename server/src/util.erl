@@ -203,3 +203,21 @@ now_microseconds_test() ->
     % Now1 and Now2 are equal (within 5 microseconds)
     ?assert((Now1 - Now2) =< 5)
   ].
+
+now_milliseconds_test() ->
+  Now1 = now_milliseconds(),
+  Now2 = now_milliseconds(now()),
+  [
+    ?assertError(function_clause, now_milliseconds(1234)),
+    % Now1 and Now2 are equal
+    ?assertEqual(Now1, Now2)
+  ].
+
+now_seconds_test() ->
+  Now1 = now_seconds(),
+  Now2 = now_seconds(now()),
+  [
+    ?assertError(function_clause, now_seconds(1234)),
+    % Now1 and Now2 are equal
+    ?assertEqual(Now1, Now2)
+  ].
