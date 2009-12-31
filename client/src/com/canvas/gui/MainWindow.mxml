@@ -164,104 +164,91 @@
 	<s:VGroup width="100%"
 			  height="100%"
 			  gap="0"
-			  horizontalAlign="center"
-			  paddingLeft="10"
-			  paddingRight="10"
-			  paddingTop="10"
-			  paddingBottom="10">
-		<s:Panel title="Canvas"
-				 width="100%"
-				 height="100%"
-				 maxWidth="900"
-				 maxHeight="900">
-			<s:layout>
-				<s:VerticalLayout gap="2" />
-			</s:layout>
+			  horizontalAlign="center">
 			
-			<components:CanvasView width="100%"
-							 height="100%"
-							 id="canvasView"
-							 drawingSize="{lineSize.value}"
-							 drawingColor="{colorPicker.selectedColor}" />
-			
-			<mx:Canvas backgroundColor="#DDDDDD"
-					   width="100%">
-				<s:HGroup paddingLeft="5"
-						  paddingRight="5"
-						  paddingTop="2"
-						  paddingBottom="2"
-						  width="100%"
+		<components:CanvasView width="100%"
+						 height="100%"
+						 id="canvasView"
+						 drawingSize="{lineSize.value}"
+						 drawingColor="{colorPicker.selectedColor}" />
+		
+		<mx:Canvas backgroundColor="#DDDDDD"
+				   width="100%">
+			<s:HGroup paddingLeft="5"
+					  paddingRight="5"
+					  paddingTop="2"
+					  paddingBottom="2"
+					  width="100%"
+					  verticalAlign="middle">
+				
+				<!--
+				See SRS	3.1.1.2 Drawing Tool
+						3.1.1.3 Panning Tool
+						3.2.3 Changing to Drawing Mode
+						3.2.4 Changing to Panning Mode
+				-->
+				<s:ButtonBar id="modeSelector"
+							 requireSelection="true"
+							 horizontalCenter="0"
+							 verticalCenter="0"
+							 selectedIndex="0"
+							 change="changeMode(event)"
+							 skinClass="com.canvas.gui.skins.ButtonBarSkin">
+					<s:dataProvider>
+						<s:ArrayList>
+							<fx:Object label="Move"
+									   icon="@Embed(source='assets/arrow_out.png')"
+									   toolTip="Move around the canvas (m)"/>
+							<fx:Object label="Paint"
+									   icon="@Embed(source='assets/paintbrush.png')"
+									   toolTip="Paint on the canvas (p)"/>	
+						</s:ArrayList>
+					</s:dataProvider>
+				</s:ButtonBar>
+				
+				<!--
+				See SRS	3.1.1.4 Paint Color
+						3.1.1.5 Brush Size
+						3.2.7 Changing Paint Color
+						3.2.8 Changing Brush Size
+				-->
+				
+				<s:HGroup gap="0"
 						  verticalAlign="middle">
-					
-					<!--
-					See SRS	3.1.1.2 Drawing Tool
-							3.1.1.3 Panning Tool
-							3.2.3 Changing to Drawing Mode
-							3.2.4 Changing to Panning Mode
-					-->
-					<s:ButtonBar id="modeSelector"
-								 requireSelection="true"
-								 horizontalCenter="0"
-								 verticalCenter="0"
-								 selectedIndex="0"
-								 change="changeMode(event)"
-								 skinClass="com.canvas.gui.skins.ButtonBarSkin">
-						<s:dataProvider>
-							<s:ArrayList>
-								<fx:Object label="Move"
-										   icon="@Embed(source='assets/arrow_out.png')"
-										   toolTip="Move around the canvas (m)"/>
-								<fx:Object label="Paint"
-										   icon="@Embed(source='assets/paintbrush.png')"
-										   toolTip="Paint on the canvas (p)"/>	
-							</s:ArrayList>
-						</s:dataProvider>
-					</s:ButtonBar>
-					
-					<!--
-					See SRS	3.1.1.4 Paint Color
-							3.1.1.5 Brush Size
-							3.2.7 Changing Paint Color
-							3.2.8 Changing Brush Size
-					-->
-					
-					<s:HGroup gap="0"
-							  verticalAlign="middle">
-						<mx:Label text="Paint Color: " />
-						<mx:ColorPicker id="colorPicker"
-										change="setMode(CanvasView.MODE_DRAWING)" />
-					</s:HGroup>
-					<s:HGroup gap="0"
-							  verticalAlign="middle">
-						<mx:Label text="Brush Size: " />
-						<s:HGroup gap="0"
-								  verticalAlign="middle">
-							
-							<s:TextInput id="lineSizeInput"
-										 width="20"
-										 text="{lineSize.value}"
-										 click="lineSizeInput.selectAll()"
-										 maxChars="2"
-										 change="lineSizeTextChange(event)" />
-							
-							<s:Spinner id="lineSize"
-									   minimum="{MIN_LINE_SIZE}"
-									   maximum="{MAX_LINE_SIZE}"
-									   value="{INIT_LINE_SIZE}"
-									   height="{lineSizeInput.height}"
-									   change="setMode(CanvasView.MODE_DRAWING)" />
-						</s:HGroup>
-					</s:HGroup>
-					
-					<mx:Spacer width="100%" />
-					
-					<components:IconButton label="Jump"
-										   click="showJumpWindow()"
-										   icon="@Embed(source='assets/shape_square_go.png')"
-										   skinClass="com.canvas.gui.skins.IconButtonSkin"
-										   toolTip="Jump to a tile" />
+					<mx:Label text="Paint Color: " />
+					<mx:ColorPicker id="colorPicker"
+									change="setMode(CanvasView.MODE_DRAWING)" />
 				</s:HGroup>
-			</mx:Canvas>
-		</s:Panel>
+				<s:HGroup gap="0"
+						  verticalAlign="middle">
+					<mx:Label text="Brush Size: " />
+					<s:HGroup gap="0"
+							  verticalAlign="middle">
+						
+						<s:TextInput id="lineSizeInput"
+									 width="20"
+									 text="{lineSize.value}"
+									 click="lineSizeInput.selectAll()"
+									 maxChars="2"
+									 change="lineSizeTextChange(event)" />
+						
+						<s:Spinner id="lineSize"
+								   minimum="{MIN_LINE_SIZE}"
+								   maximum="{MAX_LINE_SIZE}"
+								   value="{INIT_LINE_SIZE}"
+								   height="{lineSizeInput.height}"
+								   change="setMode(CanvasView.MODE_DRAWING)" />
+					</s:HGroup>
+				</s:HGroup>
+				
+				<mx:Spacer width="100%" />
+				
+				<components:IconButton label="Jump"
+									   click="showJumpWindow()"
+									   icon="@Embed(source='assets/shape_square_go.png')"
+									   skinClass="com.canvas.gui.skins.IconButtonSkin"
+									   toolTip="Jump to a tile" />
+			</s:HGroup>
+		</mx:Canvas>
 	</s:VGroup>
 </s:Application>
