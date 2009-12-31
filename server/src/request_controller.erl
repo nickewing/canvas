@@ -75,7 +75,7 @@ update(Req, S) ->
   case fetch_updates(Tiles, SID, S) of
     Lines when is_list(Lines) ->
       resp_ok(
-        util:num_to_str(util:now_microseconds()) ++ " " ++
+        util:num_to_str(util:now_milliseconds()) ++ " " ++
         lines_to_resp_str(Lines)
       );
     cancel ->
@@ -218,7 +218,7 @@ parse_line(Str) ->
     points = Points,
     color  = util:str_to_num(ColorStr),
     size   = util:str_to_num(SizeStr),
-    time   = util:now_microseconds(),
+    time   = util:now_milliseconds(),
     box    = spatial:points_box(Points)
   }.
 

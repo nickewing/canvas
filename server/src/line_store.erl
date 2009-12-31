@@ -112,7 +112,7 @@ connection_test() ->
 
 %% Tests save_line/2 and get_lines/3
 store_test() ->
-  Now  = util:now_microseconds(),
+  Now  = util:now_milliseconds(),
   Conn = connect(),
   L = #line{
     points = [-9000000,-9000001,-9000010,-9000011,-9000012,-9000013],
