@@ -14,7 +14,7 @@ public class TestServerService {
 	
 	[Test]
 	public function testProperties():void {
-		Assert.assertEquals(service.url, "http://" + service.SERVER_HOST + ":" + service.SERVER_PORT + "/test");
+		Assert.assertEquals(service.url, "http://canvas.nickewing.net:8000/test");
 		Assert.assertEquals(service.resultFormat, "text");
 		Assert.assertEquals(service.method, "POST");
 	}

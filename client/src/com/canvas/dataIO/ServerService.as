@@ -1,6 +1,7 @@
 package com.canvas.dataIO {
 	
 import mx.rpc.http.HTTPService;
+import mx.core.FlexGlobals;
 
 /**
  * Wrapper for all server requests 
@@ -14,14 +15,9 @@ public class ServerService extends HTTPService {
 	//---------------------------------------------------------------------
 	
 	/**
-	 * Server's host name
+	 * Default server's host name
 	 */
-	public const SERVER_HOST:String = "canvas.nickewing.net";
-	
-	/**
-	 * Port of server
-	 */
-	public const SERVER_PORT:Number = 80;
+	public const DEFAULT_HOST:String = "canvas.nickewing.net:8000";
 	
 	//---------------------------------------------------------------------
 	//
@@ -32,9 +28,21 @@ public class ServerService extends HTTPService {
 	public function ServerService(name:String, rootURL:String = null, destination:String = null) {
 		super(rootURL, destination);
 		
-		url          = "http://" + SERVER_HOST + ":" + SERVER_PORT + "/" + name;
+		url          = "http://" + server_host + "/" + name;
 		resultFormat = "text";
 		method       = "POST";
+	}
+	
+	//---------------------------------------------------------------------
+	//
+	//  Properties
+	//
+	//---------------------------------------------------------------------
+	
+	private function get server_host():String {
+		return FlexGlobals.topLevelApplication.parameters.server ?
+				FlexGlobals.topLevelApplication.parameters.server :
+				DEFAULT_HOST;
 	}
 }
 
