@@ -6,11 +6,13 @@
 				backgroundColor="#EEEEEE"
 				layout="vertical"
 				showCloseButton="true"
-				title="Jump To Tile"
-				close="closeWindow()">
+				title="Jump To Tile" creationComplete="jumpXInput.setFocus()"
+				close="closeWindow()"
+				keyUp="keypress(event)">
 	<fx:Script>
 		<![CDATA[
 			import com.canvas.gui.components.CanvasView;
+			
 			import mx.managers.PopUpManager;
 			
 			//---------------------------------------------------------------------
@@ -37,6 +39,12 @@
 			//
 			//---------------------------------------------------------------------
 			
+			protected function keypress(e:KeyboardEvent):void {
+				if (e.keyCode == 27) {
+					closeWindow();
+				}
+			}
+			
 			protected function closeWindow():void {
 				PopUpManager.removePopUp(this);
 			}
@@ -61,27 +69,33 @@
 	<s:Label text="Enter the coordinates of the tile you would like to jump to and click 'Jump'."
 			 width="240" />
 	
-	<s:VGroup horizontalAlign="center" width="100%">
-		<s:HGroup verticalAlign="middle">
-			<s:Label text="x: " />
-			<s:TextInput id="jumpXInput"
-						 text="0"
-						 maxChars="12"
-						 width="70" />
-			<s:Label text="y: " />
-			<s:TextInput id="jumpYInput"
-						 text="0"
-						 maxChars="12"
-						 width="70" />	
-		</s:HGroup>
-	</s:VGroup>
-	
-	<s:HGroup width="100%">
-		<mx:Spacer width="100%" />
-		<s:Button label="Jump"
-				  click="jump()" />
-		<s:Button label="Cancel"
-				  click="closeWindow()" />
-	</s:HGroup>
-	
+	<mx:Form defaultButton="{jumpButton}"
+			 paddingTop="0"
+			 paddingBottom="0"
+			 paddingLeft="0"
+			 paddingRight="0"
+			 width="100%">
+		<s:VGroup horizontalAlign="center" width="100%">
+			<s:HGroup verticalAlign="middle">
+				<s:Label text="x: " />
+				<s:TextInput id="jumpXInput"
+							 text="0"
+							 maxChars="12"
+							 width="70" />
+				<s:Label text="y: " />
+				<s:TextInput id="jumpYInput"
+							 text="0"
+							 maxChars="12"
+							 width="70" />	
+			</s:HGroup>
+		</s:VGroup>
+		
+		<s:HGroup width="100%">
+			<mx:Spacer width="100%" />
+			<s:Button label="Jump"
+					  click="jump()" id="jumpButton" />
+			<s:Button label="Cancel"
+					  click="closeWindow()" />
+		</s:HGroup>	
+	</mx:Form>
 </mx:TitleWindow>
