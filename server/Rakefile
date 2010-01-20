@@ -1,32 +1,46 @@
 # Ruby rake file for server specific tasks
 
-require 'rake'
-require 'rake/clean'
-
 # Configuration
+# ==============================================================================
 START_MODULE = "canvas"
 TEST_MODULE  = "test_runner"
 NODE_NAME    = "canvas001"
 
+CC                = 'gcc'
+ERL_INTERFACE_DIR = "/usr/local/lib/erlang/lib/erl_interface-3.6.2/"
 
-# No Need to change
+# ==============================================================================
+
+require 'rake'
+require 'rake/clean'
+
 PWD = `pwd`.strip
 
-DEPS = FileList['deps/*']
-
-deps_flags = DEPS.inject("") do |str, d|
-  str + " -I #{d}/include -pa #{d}/ebin"
+# Server Erlang files
+ERL_DEPS = FileList['deps/*']
+ERL_DEPS_FLAGS = ERL_DEPS.inject("") do |str, d|
+  "#{str} -I #{d}/include -pa #{d}/ebin"
 end
+ERLC_FLAGS = "-I include +warn_unused_vars +warn_unused_import " +
+             "#{ERL_DEPS_FLAGS}"
+ERL_RUN    = "erl -pa #{PWD}/ebin #{PWD}/deps/*/ebin"
 
-ERLC_FLAGS = "-I include +warn_unused_vars +warn_unused_import #{deps_flags}"
+ERL_SRC    = FileList['src/**/*.erl']
+ERL_OBJ    = ERL_SRC.pathmap("%{src,ebin}X.beam")
+ERL_APP    = FileList['src/**/*.app'].pathmap("%{src,ebin}X.app")
 
-ERL_RUN = "erl -pa #{PWD}/ebin #{PWD}/deps/*/ebin"
+# Raster manager C files
+RP_BIN   = 'bin/raster_painter'
+RP_SRC   = FileList['src/raster_painter/**/*.c']
+RP_OBJ   = RP_SRC.pathmap("%{src/raster_painter,bin}X.o")
+RP_LIBS  = "`MagickWand-config --ldflags --libs` -L#{ERL_INTERFACE_DIR}lib " + 
+           "-lerl_interface -lei"
+RP_INC   = "-I#{ERL_INTERFACE_DIR}include"
+RP_FLAGS = "`MagickWand-config --cflags --cppflags` -03 -Wall"
 
-SRC = FileList['src/**/*.erl']
-OBJ = SRC.pathmap("%{src,ebin}X.beam")
-APP = FileList['src/**/*.app']
-CLEAN.include(['**/*.dump'])
-CLOBBER.include(['**/*.beam'])
+# Clean up
+CLEAN.include(RP_OBJ + ['**/*.dump', "bin/draw.dSYM"])
+CLOBBER.include(ERL_OBJ + ERL_APP + [RP_BIN])
 
 def build_package_dir(source)
   dir = 'ebin' + File.split(source)[0][/\/.*$/].to_s
@@ -34,23 +48,30 @@ def build_package_dir(source)
   dir
 end
 
+# Compile Erlang files
 rule '.beam' => ["%{ebin,src}X.erl"] do |t|
   out = build_package_dir(t.source)
   sh "erlc -pa ebin -W #{ERLC_FLAGS} -o #{out} #{t.source}"
 end
 
-task :copy_app do
-  APP.each do |f|
-    dir = build_package_dir(f)
-    filename = File.split(f).last
-    ebin_app = File.join dir, filename
-    copy f, dir if not File.exists? ebin_app or
-                   File.mtime(f) > File.mtime(ebin_app)
-  end
+# Copy .app files from src/ to ebin/
+rule %r/^ebin\/.*\.app$/ => ["%{ebin,src}X.app"] do |t|
+  sh "cp #{t.source} #{t.name}"
+end
+
+# Compile raster manager objects from .c files
+rule %r/^bin\/.*\.o$/ => ["%{bin,src/raster_painter}X.c"] do |t|
+  sh "#{CC} #{RP_INC} #{RP_FLAGS} -c -o #{t.name} #{t.source} "
+end
+
+# Compile raster manager bin
+file RP_BIN => RP_OBJ do |t|
+  sh "#{CC} #{RP_LIBS} #{RP_INC} #{RP_FLAGS} -o #{t.name} #{t.source} #{RP_OBJ}"
 end
 
 desc 'Compile all'
-task :compile => [:copy_app] + OBJ
+task :compile => ERL_OBJ + ERL_APP + RP_OBJ + [RP_BIN]
+task :default => :compile
 
 desc "Start development mode"
 task :dev_start => [:compile] do
@@ -59,23 +80,24 @@ end
 
 desc "Start daemon"
 task :start => [:compile] do
-  sh "#{ERL_RUN} -boot start_sasl -s #{START_MODULE} -detached -sname #{NODE_NAME}"
+  sh "#{ERL_RUN} -boot start_sasl -s #{START_MODULE} -detached " + 
+     "-sname #{NODE_NAME}"
 end
 
 desc "Stop daemon"
 task :stop => [:compile] do
-  host = `hostname -s`.chomp
-  sh "#{ERL_RUN} -s #{START_MODULE} stop #{NODE_NAME}@#{host} -sname daemon_stopper -noshell"
+  sh "#{ERL_RUN} -s #{START_MODULE} stop #{NODE_NAME}@#{`hostname -s`.chomp} " +
+     "-sname daemon_stopper -noshell"
 end
 
 desc "Run unit tests" 
 task :test => [:compile] do
-  sh "#{ERL_RUN} -s #{TEST_MODULE} test_app_modules canvas -run init stop -noshell -DTEST"
+  sh "#{ERL_RUN} -s #{TEST_MODULE} test_app_modules canvas -run init stop " + 
+     "-noshell -DTEST"
 end
 
 desc "Generate documentation"
 task :doc => [:compile] do
-  sh "cd doc && erl -noshell -run edoc files ../#{SRC.join(" ../")} -run init stop"
+  sh "cd doc && erl -noshell -run edoc files ../#{SRC.join(" ../")} " + 
+      "-run init stop"
 end
-
-task :default => :compile
