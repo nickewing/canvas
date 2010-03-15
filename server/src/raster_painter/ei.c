@@ -1,3 +1,10 @@
+/*
+ * Author: Nick Ewing <nick@nickewing.net>
+ * Copyright 2009 Nick Ewing.
+ * 
+ * Erlang interface for raster_painter
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include "erl_interface.h"
@@ -6,7 +13,7 @@
 #include "raster_painter.h"
 
 typedef struct {
-  RasterPainter *painter;
+  RPCanvas *canvas;
 } State;
 
 float etermNumToFloat(ETERM* term) {
@@ -19,40 +26,40 @@ float etermNumToFloat(ETERM* term) {
   }
 }
 
-Line* etermToLine(ETERM *term) {
+RPLine* etermToRPLine(ETERM *term) {
   ETERM         *list,
                 *head,
                 *tail,
-                *eSize,
-                *eColor,
-                *ePoints;
-  Line          *line;
-  unsigned int  ePointsLen,
+                *size,
+                *color,
+                *points;
+  RPLine        *line;
+  unsigned int  pointsLen,
                 i;
   
   if (!ERL_IS_TUPLE(term))
     return NULL;
   
-  eSize   = erl_element(1, term);
-  eColor  = erl_element(2, term);
-  ePoints = erl_element(3, term);
+  size   = erl_element(1, term);
+  color  = erl_element(2, term);
+  points = erl_element(3, term);
   
-  if (!ERL_IS_LIST(ePoints))
+  if (!ERL_IS_LIST(points))
     return NULL;
   
-  ePointsLen = erl_length(ePoints);
+  pointsLen = erl_length(points);
   
-  if (ePointsLen < 1)
+  if (pointsLen < 1)
     return NULL;
   
-  line              = malloc(sizeof(Line));
-  line->size        = ERL_INT_VALUE(eSize);
-  line->color       = ERL_INT_VALUE(eColor);
-  line->pointCount  = ePointsLen;
-  line->points      = malloc(sizeof(int) * ePointsLen);
+  line              = malloc(sizeof(RPLine));
+  line->size        = ERL_INT_VALUE(size);
+  line->color       = ERL_INT_VALUE(color);
+  line->pointCount  = pointsLen;
+  line->points      = malloc(sizeof(int) * pointsLen);
   
-  list = ePoints;
-  for (i = 0; i < ePointsLen; i++) {
+  list = points;
+  for (i = 0; i < pointsLen; i++) {
     head = erl_hd(list);
     line->points[i] = etermNumToFloat(head);
     erl_free_term(head);
@@ -61,111 +68,110 @@ Line* etermToLine(ETERM *term) {
     list = tail;
   }
   
-  if (list != ePoints)
+  if (list != points)
     erl_free_term(list);
   
-  erl_free_term(eSize);
-  erl_free_term(eColor);
-  erl_free_term(ePoints);
+  erl_free_term(size);
+  erl_free_term(color);
+  erl_free_term(points);
   
   return line;
 }
 
-ETERM* startDrawingReq(ETERM *eTuple, State *state) {
+ETERM* eiStartDrawingReq(ETERM *cmdTuple, State *state) {
   ETERM   *eFilename,
-          *eHeight,
-          *eWidth;
+          *height,
+          *width;
   char    *filename;
   char    result[30] = "unknown_error";
   
-  
-  eFilename = erl_element(2, eTuple);
-  eWidth    = erl_element(3, eTuple);
-  eHeight   = erl_element(4, eTuple);
-  
-  if (!ERL_IS_LIST(eFilename)) {
-    strcpy(result, "invalid_filename");
-  } else if(!ERL_IS_INTEGER(eWidth)) {
-    strcpy(result, "invalid_width");
-  } else if (!ERL_IS_INTEGER(eHeight)) {
-    strcpy(result, "invalid_height");
+  if (!state || !state->canvas) {
+    strcpy(result, "already_started");
   } else {
-    filename  = erl_iolist_to_string(eFilename);
-    // if (state->painter) {
-    //   painterFinish(state->painter);
-    // }
+    eFilename = erl_element(2, cmdTuple);
+    width     = erl_element(3, cmdTuple);
+    height    = erl_element(4, cmdTuple);
     
-    state->painter = painterStart(filename, ERL_INT_VALUE(eWidth),
-                                  ERL_INT_VALUE(eHeight));
-    free(filename);
+    if (!ERL_IS_LIST(eFilename)) {
+      strcpy(result, "invalid_filename");
+    } else if(!ERL_IS_INTEGER(width)) {
+      strcpy(result, "invalid_width");
+    } else if (!ERL_IS_INTEGER(height)) {
+      strcpy(result, "invalid_height");
+    } else {
+      filename  = erl_iolist_to_string(eFilename);
+    
+      state->canvas = RPNewCanvas(filename, ERL_INT_VALUE(width),
+                                  ERL_INT_VALUE(height));
+      free(filename);
+    }
+    
+    erl_free_term(eFilename);
+    erl_free_term(height);
+    erl_free_term(width);
   }
-  
-  erl_free_term(eFilename);
-  erl_free_term(eHeight);
-  erl_free_term(eWidth);
   
   return erl_mk_atom(result);
 }
 
-ETERM* drawLineReq(ETERM *eTuple, State *state) {
-  ETERM *eLine;
-  Line  *line;
+ETERM* eiDrawLineReq(ETERM *cmdTuple, State *state) {
+  ETERM   *eLine;
+  RPLine  *line;
   
-  eLine = erl_element(2, eTuple);
+  eLine = erl_element(2, cmdTuple);
   
-  if (!state->painter)
+  if (!state->canvas)
     return erl_mk_atom("not_started");
   
-  if ((line = etermToLine(eLine))) {
-    drawLine(state->painter, line);
-    return erl_mk_atom("ok");
+  if ((line = etermToRPLine(eLine))) {
+    if (RPDrawLine(state->canvas, line))
+      return erl_mk_atom("ok");
+    else
+      return erl_mk_atom("error");
   } else {
     return erl_mk_atom("invalid_line");
   }
 }
 
-ETERM* stopDrawingReq(ETERM *eTuple, State *state) {
-  if (state->painter) {
-    painterFinish(state->painter);
-    return erl_mk_atom("ok");
+ETERM* eiStopDrawingReq(ETERM *cmdTuple, State *state) {
+  int res;
+  
+  if (state->canvas) {
+    res = RPDrawCanvas(state->canvas);
+    RPFreeCanvas(state->canvas);
+    return erl_mk_atom(res ? "ok" : "error");
   } else {
     return erl_mk_atom("not_started");
   }
 }
 
-ETERM* identity(ETERM *eTuple) {
-  return erl_copy_term(eTuple);
-}
-
-ETERM* routeRequest(byte *buf, State *state) {
-  ETERM   *eTuple,
+ETERM* eiRouteReq(byte *buf, State *state) {
+  ETERM   *cmdTuple,
           *eCmd,
-          *eResult;
+          *result;
   char    *cmd;
   
-  eTuple  = erl_decode(buf);
-  eCmd    = erl_element(1, eTuple);
+  cmdTuple  = erl_decode(buf);
+  eCmd    = erl_element(1, cmdTuple);
   cmd     = ERL_ATOM_PTR(eCmd);
   if (strcmp(cmd, "start_drawing") == 0) {
-    eResult = startDrawingReq(eTuple, state);
+    result = eiStartDrawingReq(cmdTuple, state);
   } else if (strcmp(cmd, "draw_line") == 0) {
-    eResult = drawLineReq(eTuple, state);
+    result = eiDrawLineReq(cmdTuple, state);
   } else if (strcmp(cmd, "stop_drawing") == 0) {
-    eResult = stopDrawingReq(eTuple, state);
-  } else if (strcmp(cmd, "identity") == 0) {
-    eResult = identity(eTuple);
+    result = eiStopDrawingReq(cmdTuple, state);
   } else {
-    eResult = erl_mk_atom("invalid_request");
+    result = erl_mk_atom("invalid_request");
   }
   
-  erl_free_compound(eTuple);
+  erl_free_compound(cmdTuple);
   erl_free_term(eCmd);
   
-  return eResult;
+  return result;
 }
 
 int main() {
-  ETERM   *eResult;
+  ETERM   *result;
   byte    *buf;
   State   *state;
   
@@ -173,13 +179,16 @@ int main() {
   
   erl_init(NULL, 0);
   
-  while (read_cmd(&buf) > 0) {
-    eResult = routeRequest(buf, state);
-    erl_encode(eResult, buf);
-    write_cmd(buf, erl_term_len(eResult));
-    
-    erl_free_term(eResult);
+  while (erlCommRead(&buf) > 0) {
+    result = eiRouteReq(buf, state);
+    erl_encode(result, buf);
+    erlCommWrite(buf, erl_term_len(result));
+    erl_free_term(result);
   }
+  
+  if (state->canvas)
+    RPFreeCanvas(state->canvas);
+  free(state);
   
   return 0;
 }

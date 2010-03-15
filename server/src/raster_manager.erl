@@ -13,10 +13,17 @@
   init/1, handle_call/3, handle_cast/2,
   handle_info/2, terminate/2, code_change/3,
   %% Server interface
-  start/0, test/1
+  start/0, test/1,
+  %% Worker
+  worker_start/3,
+  
+  
+  
+  test/0
 ]).
 
 -include("canvas.hrl").
+-include("spatial.hrl").
 %-include_lib("eunit/include/eunit.hrl").
 
 %% internal server state
@@ -57,23 +64,20 @@ handle_call(_Message, _From, S) ->
 
 %% @doc Handle async. call to manage
 handle_cast(test, #state{painter = Painter} = S) ->
-  Conn = line_store:connect(),
-  
-  raster_painter:start_drawing(Painter, "/Users/nick/abc.png", 5000, 5000),
-  
-  Lines = lines_to_paint_tuples(line_store:get_lines(Conn,
-                                                     {box, 0,0,5000,5000}, 0)),
+  LSConn = line_store:connect(),
+  Lines = line_store:get_oldest_unpainted_lines(LSConn, 5),
   
   lists:map(fun(L) ->
-    raster_painter:draw_line(Painter, L)
+    spawn(?MODULE, worker_start, [LSConn, L, self()])
   end, Lines),
   
-  raster_painter:stop_drawing(Painter),
+  % TODO: CLOSE LINESTORE AFTER ALL WORKERS ARE DONE!
+  % line_store:disconnect(LSConn)
   
-  line_store:disconnect(Conn),
   {noreply, S};
 %% Unknown message
-handle_cast(_Message, S) ->
+handle_cast(Message, S) ->
+  io:format("Unknown message ~p~n", [Message]),
   {noreply, S}.
 
 %% @doc Handle other messages sent to manager
@@ -88,16 +92,65 @@ terminate(_Reason, _S) ->
 code_change(_OldVersion, S, _Extra) ->
   {ok, S}.
 
+%%% Worker functions
+%%%%%%%%%%%%%%%%%%%%
+
+worker_start(LSConn, #line{box = #box{x = X, y = Y} = Box}, Parent) ->
+  Lines = line_store:get_unpainted_lines(LSConn, Box),
+  paint_tile_lines(X, Y, lines_to_paint_tuples(Lines, X, Y)).
+
+
+
+
+test() ->
+  {ok, R} = start(),
+  test(R).
+
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Internal API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-lines_to_paint_tuples(Lines) ->
-  lists:map(fun line_to_paint_tuple/1, Lines).
+lines_to_paint_tuples(Lines, OriginX, OriginY) ->
+  lists:map(fun(#line{points = Points, size = Size, color = Color}) ->
+    {Size, Color, transpose_paint_points(Points, OriginX, OriginY)}
+  end, Lines).
 
-line_to_paint_tuple(#line{points = Points, size = Size, color = Color}) ->
-  {Size, Color, Points}.
+transpose_paint_points(Points, OriginX, OriginY) ->
+  {Res, _} = lists:mapfoldl(fun(V, Dim) ->
+    case Dim of
+      x -> {V - OriginX, y};
+      y -> {V - OriginY, x}
+    end
+  end, x, Points),
+  Res.
+
+ensure_tile_dirs(X, _Y) ->
+  util:make_dir_path([var, tiles, util:num_to_str(X)]).
+
+tile_path(X, Y) ->
+  "var/tiles/" ++ util:num_to_str(X) ++ "/" ++ util:num_to_str(Y) ++ ".png".
+
+paint_tile_lines(BoxX, BoxY, Lines) ->
+  Painter = raster_painter:start(),
+  
+  io:format("~p~n", [tile_path(BoxX, BoxY)]),
+  
+  ensure_tile_dirs(BoxX, BoxY),
+  
+  raster_painter:start_drawing(Painter, tile_path(BoxX, BoxY),
+                               ?tile_size, ?tile_size),
+  
+  lists:map(fun(L) ->
+    raster_painter:draw_line(Painter, L)
+  end, Lines),
+  
+  raster_painter:stop_drawing(Painter),
+  raster_painter:stop(Painter).
+
+point_tile(X, Y) ->
+  {(X div ?tile_size) * ?tile_size, (Y div ?tile_size) * ?tile_size}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests

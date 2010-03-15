@@ -36,7 +36,8 @@ RP_OBJ   = RP_SRC.pathmap("%{src/raster_painter,bin}X.o")
 RP_LIBS  = "`MagickWand-config --ldflags --libs` -L#{ERL_INTERFACE_DIR}lib " + 
            "-lerl_interface -lei"
 RP_INC   = "-I#{ERL_INTERFACE_DIR}include"
-RP_FLAGS = "`MagickWand-config --cflags --cppflags` -03 -Wall"
+RP_FLAGS = "`MagickWand-config --cflags --cppflags` " + 
+           "-std=c99 -03 -Wall -pedantic"
 
 # Clean up
 CLEAN.include(RP_OBJ + ['**/*.dump', "bin/draw.dSYM"])

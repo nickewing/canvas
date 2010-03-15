@@ -1,6 +1,13 @@
+/*
+ * Author: Nick Ewing <nick@nickewing.net>
+ * Copyright 2009 Nick Ewing.
+ * 
+ * General functions for reading and writing terms from Erlang
+ */
+
 typedef unsigned char byte;
 
-int read_cmd(byte **buf);
-int write_cmd(byte *buf, int len);
-int read_exact(byte *buf, int len);
-int write_exact(byte *buf, int len);
+int erlCommRead(byte **buf);
+int erlCommWrite(byte *buf, int len);
+int erlCommReadExact(byte *buf, int len);
+int erlCommWriteExact(byte *buf, int len);

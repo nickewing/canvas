@@ -7,7 +7,14 @@
 -module(line_store).
 -author('Nicholas E. Ewing <nick@nickewing.net>').
 
--export([connect/0, disconnect/1, get_lines/3, save_line/2]).
+-export([
+  connect/0,
+  disconnect/1,
+  get_lines/3,
+  save_line/2% ,
+  %   get_oldest_unpainted_lines/2,
+  %   get_unpainted_lines/2
+]).
 
 -include("spatial.hrl").
 -include("canvas.hrl").
@@ -36,8 +43,7 @@ get_lines(#ls_conn{db = Db}, Box, T0) ->
               AND time >= ", util:num_to_str(T0), "
             ORDER BY time ASC"
           ], ""),
-  {ok, [{_, _, Records}|_]} = pgsql:squery(Db, Query),
-  lists:map(fun record_to_line/1, Records).
+  result_to_lines(pgsql:squery(Db, Query)).
 
 %% @doc Save a line to the database
 save_line(#ls_conn{db = Db}, #line{points = Points, size = Size, box = Box,
@@ -55,10 +61,39 @@ save_line(#ls_conn{db = Db}, #line{points = Points, size = Size, box = Box,
                     util:num_to_str(Time),
                   ")"
           ], ""),
-  %io:format("~w~n~p~n~s~n", [Db, L, Query]),
-  {ok, Res} = pgsql:squery(Db, Query),
-  %io:format("~p~n", [Res]),
-  Res.
+  {ok, _Res} = pgsql:squery(Db, Query),
+  ok.
+
+% set_line_painted(#ls_conn{db = Db}, #line{id = Id}) ->
+%   Query = string:join([
+%             "UPDATE lines
+%             SET painted = true
+%             WHERE id = ", util:num_to_str(Id)
+%           ], ""),
+%   {ok, _Res} = pgsql:squery(Db, Query),
+%   ok.
+% 
+% get_oldest_unpainted_lines(#ls_conn{db = Db}, Limit, Offset) ->
+%   Query = string:join([
+%             "SELECT *
+%             FROM lines
+%             WHERE NOT painted
+%             ORDER BY time DESC
+%             LIMIT ", util:num_to_str(Limit), "
+%             OFFSET ", util:num_to_str(Offset)
+%           ], ""),
+%   result_to_lines(pgsql:squery(Db, Query)).
+% 
+% get_unpainted_lines(#ls_conn{db = Db}, Box) ->
+%   % Query = string:join([
+%   %           "SELECT *
+%   %           FROM lines
+%   %           WHERE ", box_to_db_str(Box) , " && bounding_box
+%   %             AND NOT painted
+%   %           ORDER BY time ASC"
+%   %         ], ""),
+%   % result_to_lines(pgsql:squery(Db, Query)),
+%   [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Interal API
@@ -89,14 +124,19 @@ db_str_to_points(BinStr) ->
   lists:map(fun util:str_to_num/1, PointStrs).
 
 %% Convert a result record from the database to a #line
-record_to_line([_Id, Box, Points, Color, Size, _IP, Time]) ->
+record_to_line([Id, Box, Points, Color, Size, _IP, Time, _Painted]) ->
   #line{
+    id     = Id,
     box    = db_str_to_box(Box),
     points = db_str_to_points(Points),
     color  = Color,
     size   = Size,
     time   = Time
   }.
+
+%% Turn a database result set to a list of lines
+result_to_lines({ok, [{_, _, Records}|_]}) ->
+  lists:map(fun record_to_line/1, Records).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests
@@ -163,5 +203,6 @@ record_to_list_test() ->
       time   = 12242333344
     },
     record_to_line([3, <<"((178,169.5),(199,188.5))">>,
-                    <<"178,169.5,199,188.5">>, 0, 3, "0.0.0.0", 12242333344])
+                    <<"178,169.5,199,188.5">>, 0, 3, "0.0.0.0",
+                    12242333344, false])
   ).

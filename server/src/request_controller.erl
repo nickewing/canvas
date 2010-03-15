@@ -216,7 +216,7 @@ parse_line(Str) ->
   Points  = parse_points(PointStr),
   #line{
     points = Points,
-    color  = util:str_to_num(ColorStr),
+    color  = util:hex_to_int(ColorStr),
     size   = util:str_to_num(SizeStr),
     time   = util:now_milliseconds(),
     box    = spatial:points_box(Points)
@@ -254,7 +254,7 @@ lines_to_resp_str(Lines) ->
 line_to_resp_str(#line{points = P, size = S, color = C}) ->
   string:join([
     points_to_resp_str(P),
-    util:num_to_str(C),
+    string:right(util:to_hex(C), 6, $0),
     util:num_to_str(S)
   ], "/").
 

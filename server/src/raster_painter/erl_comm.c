@@ -1,28 +1,34 @@
+/*
+ * Author: Nick Ewing <nick@nickewing.net>
+ * Copyright 2009 Nick Ewing.
+ * 
+ * General functions for reading and writing terms from Erlang
+ */
+
 #include <unistd.h>
+#include <stdlib.h>
 #include "erl_comm.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-int read_cmd(byte **buf) {
+int erlCommRead(byte **buf) {
   int len;
   byte cBuf[2];
-  if (read_exact(cBuf, 2) != 2)
+  if (erlCommReadExact(cBuf, 2) != 2)
     return -1;
   len = (cBuf[0] << 8) | cBuf[1];
   *buf = malloc(sizeof(byte) * len);
-  return read_exact(*buf, len);
+  return erlCommReadExact(*buf, len);
 }
 
-int write_cmd(byte *buf, int len) {
+int erlCommWrite(byte *buf, int len) {
   byte li;
   li = (len >> 8) & 0xff;
-  write_exact(&li, 1);
+  erlCommWriteExact(&li, 1);
   li = len & 0xff;
-  write_exact(&li, 1);
-  return write_exact(buf, len);
+  erlCommWriteExact(&li, 1);
+  return erlCommWriteExact(buf, len);
 }
 
-int read_exact(byte *buf, int len) {
+int erlCommReadExact(byte *buf, int len) {
   int i, got=0;
   do {
     if ((i = read(0, buf + got, len - got)) <= 0)
@@ -32,7 +38,7 @@ int read_exact(byte *buf, int len) {
   return len;
 }
 
-int write_exact(byte *buf, int len) {
+int erlCommWriteExact(byte *buf, int len) {
   int i, wrote = 0;
   do {
     if ((i = write(1, buf + wrote, len - wrote)) <= 0)

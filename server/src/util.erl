@@ -19,7 +19,8 @@
   now_milliseconds/0,
   now_milliseconds/1,
   now_seconds/0,
-  now_seconds/1
+  now_seconds/1,
+  make_dir_path/1
 ]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -108,6 +109,19 @@ now_seconds() ->
 now_seconds({Macro, Sec, _Micro}) ->
   Macro * 1000000 + Sec.
 
+%%% File functions
+%%%%%%%%%%%%%%%%%%
+
+%% @doc Create full directory path
+make_dir_path(PathSegments)
+    when is_list(PathSegments) and (length(PathSegments) > 0) ->
+  file:make_dir(lists:nth(1, PathSegments)),
+  reducel(fun(Dir, Path) ->
+    NewPath = filename:absname_join(Path, Dir),
+    file:make_dir(NewPath),
+    NewPath
+  end, PathSegments),
+  ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests

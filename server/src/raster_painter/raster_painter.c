@@ -1,111 +1,101 @@
+/*
+ * Author: Nick Ewing <nick@nickewing.net>
+ * Copyright 2009 Nick Ewing.
+ * 
+ * Paints vector lines to a raster image using ImageMagick API
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include "raster_painter.h"
 
-#define ThrowWandException(wand) \
-  { \
-    char *description; \
-    ExceptionType severity; \
-    description = MagickGetException(wand,&severity); \
-    fprintf(stderr,"%s %s %lu %s\n", GetMagickModule(), description); \
-    description = (char *) MagickRelinquishMemory(description); \
-    exit(-1); \
-  }
-
-void freeLine(Line *line) {
+void RPLineFree(RPLine *line) {
   free(line->points);
   free(line);
 }
 
-// void freeLineSet(LineSet *lineSet) {
-//   unsigned int i;
-//   for (i = 0; i < lineSet->count; i++)
-//     freeLine(lineSet->lines[i]);
-//   free(lineSet->lines);
-//   free(lineSet);
-// }
-
-void drawLine(RasterPainter *painter, Line* line) {
-  unsigned int i;
-  char colorBuffer[8];
+/*
+  Draw a line using a RPCanvas
+*/
+int RPDrawLine(RPCanvas *canvas, RPLine* line) {
+  unsigned int  i;
+  char          colorBuffer[8];
   
-  assert(line->pointCount % 2 == 0 && line->pointCount > 0);
+  if (line->pointCount % 2 != 0 || line->pointCount < 0)
+    return 0;
   
   sprintf(colorBuffer, "#%06x", line->color);
   
-  DrawSetStrokeWidth(painter->dWand, line->size);
-  PixelSetColor(painter->cWand, colorBuffer);
-  DrawSetStrokeColor(painter->dWand, painter->cWand);
+  DrawSetStrokeWidth(canvas->dWand, line->size);
+  PixelSetColor(canvas->cWand, colorBuffer);
+  DrawSetStrokeColor(canvas->dWand, canvas->cWand);
   
-  for (i = 0; i <= line->pointCount - 4; i += 2) {
-    DrawLine(painter->dWand, line->points[i], line->points[i + 1],
+  for (i = 0; i <= line->pointCount - 4; i += 2)
+    DrawLine(canvas->dWand, line->points[i], line->points[i + 1],
              line->points[i + 2], line->points[i + 3]);
-  }
+  
+  return 1;
 }
 
-// void drawLineSet(RasterPainter *painter, LineSet *lineSet) {
-//   unsigned int i;
-//   for (i = 0; i < lineSet->count; i++)
-//     drawLine(painter, lineSet->lines[i]);
-// }
-
-
-
-
-RasterPainter* painterStart(char *filename, unsigned int width,
-                            unsigned int height) {
-  RasterPainter *painter;
+/*
+  Setup a RPCanvas
+*/
+RPCanvas* RPNewCanvas(char *filename, unsigned int width,
+                      unsigned int height) {
+  RPCanvas          *canvas;
   MagickBooleanType status;
   
-  // Setup drawing tools
+  /* Setup drawing tools */
   MagickWandGenesis();
-  painter           = malloc(sizeof(RasterPainter));
-  painter->mWand    = NewMagickWand();
-  painter->dWand    = NewDrawingWand();
-  painter->cWand    = NewPixelWand();
-  painter->filename = malloc(sizeof(char) * strlen(filename));
+  canvas           = malloc(sizeof(RPCanvas));
+  canvas->mWand    = NewMagickWand();
+  canvas->dWand    = NewDrawingWand();
+  canvas->cWand    = NewPixelWand();
+  canvas->filename = malloc(sizeof(char) * strlen(filename));
   
-  strcpy(painter->filename, filename);
+  strcpy(canvas->filename, filename);
   
-  // Read image
-  status = MagickReadImage(painter->mWand, filename);
+  /* Read image */
+  status = MagickReadImage(canvas->mWand, filename);
   
   if (status == MagickFalse) {
-    // Make image
-    PixelSetColor(painter->cWand, "white");
-    MagickNewImage(painter->mWand, width, height, painter->cWand);
+    /* Make image */
+    PixelSetColor(canvas->cWand, "white");
+    MagickNewImage(canvas->mWand, width, height, canvas->cWand);
   }
   
-  // Setup stroke
-  DrawSetStrokeAntialias(painter->dWand, MagickTrue);
-  DrawSetStrokeLineCap(painter->dWand, RoundCap);
-  DrawSetStrokeLineJoin(painter->dWand, RoundJoin);
+  /* Setup stroke */
+  DrawSetStrokeAntialias(canvas->dWand, MagickTrue);
+  DrawSetStrokeLineCap(canvas->dWand, RoundCap);
+  DrawSetStrokeLineJoin(canvas->dWand, RoundJoin);
   
-  return painter;
+  return canvas;
 }
 
-void painterFinish(RasterPainter *painter) {
+/*
+  Draw 
+*/
+int RPDrawCanvas(RPCanvas *canvas) {
   MagickBooleanType status;
   
-  // Set compression
-  MagickSetCompression(painter->mWand, BZipCompression);
-  MagickSetCompressionQuality(painter->mWand, 4);
+  /* Set compression */
+  MagickSetCompression(canvas->mWand, BZipCompression);
+  MagickSetCompressionQuality(canvas->mWand, 4);
   
-  // Write image
-  MagickDrawImage(painter->mWand, painter->dWand);
-  status = MagickWriteImages(painter->mWand, painter->filename, MagickTrue);
+  /* Write image */
+  MagickDrawImage(canvas->mWand, canvas->dWand);
+  status = MagickWriteImages(canvas->mWand, canvas->filename, MagickTrue);
   
-  if (status == MagickFalse)
-    ThrowWandException(painter->mWand);
-  
-  // Cleanup
-  painter->cWand = DestroyPixelWand(painter->cWand);
-  painter->mWand = DestroyMagickWand(painter->mWand);
-  painter->dWand = DestroyDrawingWand(painter->dWand);
+  return status != MagickFalse;
+}
+
+void RPFreeCanvas(RPCanvas *canvas) {
+  canvas->cWand = DestroyPixelWand(canvas->cWand);
+  canvas->mWand = DestroyMagickWand(canvas->mWand);
+  canvas->dWand = DestroyDrawingWand(canvas->dWand);
   MagickWandTerminus();
   
-  free(painter->filename);
-  free(painter);
+  free(canvas->filename);
+  free(canvas);
 }

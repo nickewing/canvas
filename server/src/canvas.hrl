@@ -25,6 +25,9 @@
 -define(ls_user,  "canvas").
 -define(ls_pass,  "").
 
+%% Size of a canvas tile
+-define(tile_size, 500).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Records
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -34,6 +37,6 @@
 % Tile information
 -record(tile, {box, time}).
 % Line information
--record(line, {points, size, color, box, time, user}).
+-record(line, {id, points, size, color, box, time, user}).
 % Server state
 -record(s_state, {cm}).

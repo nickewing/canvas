@@ -1,3 +1,10 @@
+/*
+ * Author: Nick Ewing <nick@nickewing.net>
+ * Copyright 2009 Nick Ewing.
+ * 
+ * Paints vector lines to a raster image using ImageMagick API
+ */
+
 #include <wand/MagickWand.h>
 
 typedef struct {
@@ -5,19 +12,18 @@ typedef struct {
   DrawingWand   *dWand;
   PixelWand     *cWand;
   char          *filename;
-} RasterPainter;
+} RPCanvas;
 
 typedef struct {
   unsigned int  size;
   unsigned int  color;
   float         *points;
   unsigned int  pointCount;
-} Line;
+} RPLine;
 
-void freeLine(Line*);
+void RPLineFree(RPLine*);
 
-void drawLine(RasterPainter *painter, Line* line);
-
-RasterPainter* painterStart(char *filename, unsigned int width,
-                            unsigned int height);
-void painterFinish(RasterPainter *painter);
+int RPDrawLine(RPCanvas *canvas, RPLine* line);
+RPCanvas* RPNewCanvas(char *filename, unsigned int width, unsigned int height);
+int RPDrawCanvas(RPCanvas *canvas);
+void RPFreeCanvas(RPCanvas *canvas);

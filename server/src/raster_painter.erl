@@ -10,8 +10,7 @@
   init/0,
   start_drawing/4,
   stop_drawing/1,
-  draw_line/2,
-  identity/2
+  draw_line/2
 ]).
 
 -define(comm_timeout, 30000).
@@ -46,9 +45,6 @@ stop_drawing(Pid) ->
 
 draw_line(Pid, Line) ->
   call_port(Pid, {draw_line, Line}).
-
-identity(Pid, Msg) ->
-  call_port(Pid, {identity, Msg}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Internal API

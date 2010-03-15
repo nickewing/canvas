@@ -1,0 +1,93 @@
+<html lang="en">
+  <head>
+    <title>Canvas</title>
+    <link rel="stylesheet" type="text/css" href="css/canvas_area.css" />
+    <link rel="stylesheet" media="screen" type="text/css" href="js/jquery/colorpicker/css/colorpicker.css" />
+    <link rel="stylesheet" media="screen" type="text/css" href="css/custom-theme/jquery-ui-1.8rc3.custom.css" />
+  </head>
+  <body>
+    
+    <div id="application" style="display:none">    
+      <div id="canvasAreaOuterContainer"></div>
+      <div id="toolbar">
+        
+        <div class="first section">
+          <span id="modeSelector">
+            <input type="radio" name="mode" id="drawingMode" value="drawing" /><label for="drawingMode">Draw</label>
+            <input type="radio" name="mode" id="panningMode" value="panning" checked="checked" /><label for="panningMode">Move</label>
+          </span>
+        </div>
+        
+        <div class="label">Color:</div>
+        
+        <div class="section">
+          <div id="colorSelector">
+            <div id="colorSwatch" class="swatch"></div>
+            <div class="border"></div>
+          </div>
+        </div>
+        
+        <div class="label">Size:</div>
+        
+        <div class="section">
+          <div id="brushSize"></div>
+        </div>
+      
+        <div class="right section">
+          <div id="jumpButton">Jump</div>
+        </div>
+      
+        <div class="end"></div>
+      </div>
+    
+      <div id="jumpDialog" title="Jump to Tile" style="display:none">
+        <p>Enter the coordinates of the tile you would like to jump to.</p>
+        <form>
+          x: <input type="text" id="jumpX" size="5" maxlength="12" />
+          y: <input type="text" id="jumpY" size="5" maxlength="12" />
+        </form>
+      </div>
+    </div> 
+       
+    <div id="incompatMessage" style="display:none">
+      <div class="ui-overlay">
+        <div class="ui-widget-overlay"></div>
+        <div class="ui-widget-shadow ui-corner-all shadow"></div>
+      </div>
+      <div class="message ui-widget ui-widget-content ui-corner-all">
+        <h2>Your browser is destroying the Internet!</h2> 
+        <p>
+          The browser you are using does not support HTML5 standards
+          required by this application.  By using this browser you are not only
+          limiting your own Internet experience, but also impeding the progress
+          of web development.  Please download a more competent
+          browser to continue.  You might try any of the following modern,
+          standards-supporting browsers:
+        </p>
+        <ul>
+          <li><a href="http://www.google.com/chrome">Google Chrome</a></li>
+          <li><a href="http://getfirefox.com">Mozilla Firefox</a></li>
+          <li><a href="http://www.apple.com/safari/">Apple Safari</a></li>
+          <li><a href="http://www.opera.com/">Opera</a></li>
+        </ul>
+      </div>
+    </div>
+    
+    <script type="text/javascript" src="js/jquery/jquery.js"></script>
+    <script type="text/javascript" src="js/jquery/jquery-ui.js"></script>
+    <script type="text/javascript" src="js/jquery/colorpicker/js/colorpicker.js"></script>
+    <script type="text/javascript" src="js/jquery/jquery.mousewheel.min.js"></script>
+    <script type="text/javascript" src="js/canvas_area.js"></script>
+    <script type="text/javascript">
+      $().ready(function() {
+        if (!hasCanvas()) {
+          $('#incompatMessage').show();
+        } else {        
+          $('#application').show();
+          loadApplication();
+        }
+      });
+    </script>
+  </body>
+</html>
+
