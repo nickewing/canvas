@@ -1,18 +1,85 @@
-// TODO: have server send line box
+
 // TODO: check tiles are actually copied by Update
 
-//var TEST_IMAGE = 'http://www.yourjigsaw.org.uk/Commercial/fullsize/jigsaw500.jpg';
-var TEST_IMAGE = '',
-    TILE_SIZE  = 500;
+var Canvas = {
+  tileSize:   500,
+  host:       'http://localhost:8000/',
+  //testImage:  'http://www.yourjigsaw.org.uk/Commercial/fullsize/jigsaw500.jpg'
+  testImage:  ''
+}
+
+function UnclosableMessageDialog(initTitle, initText) {
+  var text   = $('<p> /'),
+      dialog = $('<div />');
+  
+  dialog.dialog({
+    autoOpen:     false,
+    resizable:    false,
+    modal:        true,
+    height:       '100px',
+    dialogClass:  'unclosable'
+  });
+  
+  function setText(newText) {text.text(newText);}
+  function setTitle(newTitle) {dialog.attr('title', newTitle);}
+  
+  setText(initTitle);
+  setTitle(initText);
+  
+  return {
+    setText:    setText,
+    setTitle:   setTitle,
+    open:       function() {dialog.dialog('open');},
+    close:      function() {dialog.dialog('close');},
+    setButtons: function(buttons) {dialog.dialog({buttons: buttons});}
+  }
+}
+
+function ReconnectDialog() {
+  var error  = 'There was an error while attempting to talk to the server',
+      dialog = new UnclosableMessageDialog('Connection Error', error),
+      retryCallback;
+  
+  function retryButtonVisible(val) {
+    if (val) dialog.setButtons({'Retry': retryButtonClicked});
+    else     dialog.setButtons({});
+  }
+  
+  function waitAndShowRetry() {
+    setTimeout(function() {
+      retryButtonVisible(true);
+    }, 1000);
+  }
+  
+  function close() {dialog.close();}
+  
+  function retryButtonClicked() {
+    retryButtonVisible(false);
+    text.text('Retrying connection to server...');
+    retryCallback();
+  }
+  
+  return {
+    promptRetry: function(callback) {
+      text.text(error);
+      retryCallback = callback;
+      retryButtonVisible(false);
+      dialog.dialog('open');
+      setTimeout(function() {
+        retryButtonVisible(true);
+      }, 1000);
+    },
+    close: close
+  }
+}
 
 function CanvasServerSession(readyCallback, failureCallback) {
-  var HOST = 'http://localhost:8000/',
-      sid;
+  var sid;
   
   function serverRequest(action, data, success, failure) {
     data.sid = sid;
     return $.ajax({
-      url:      HOST + action,
+      url:      Canvas.host + action,
       data:     data,
       type:     'POST',
       success:  success,
@@ -20,16 +87,20 @@ function CanvasServerSession(readyCallback, failureCallback) {
     });
   }
   
-  serverRequest('join', {}, function(data) {
-    var resp = data.split(' ');
-    if (resp[0] == 'OK') {
-      sid = resp[1];
-      //console.log(sid);
-      readyCallback();
-    } else {
-      failureCallback();
-    }
-  }, failureCallback);
+  function join() {
+    serverRequest('join', {}, function(data) {
+      var resp = data.split(' ');
+      if (resp[0] == 'OK') {
+        sid = resp[1];
+        //console.log(sid);
+        readyCallback();
+      } else {
+        failureCallback();
+      }
+    }, failureCallback);
+  }
+  
+  join();
   
   function serializeLine(points, color, size) {
     return [points.join(','), color, size].join('/');
@@ -37,12 +108,13 @@ function CanvasServerSession(readyCallback, failureCallback) {
   
   return {
     getUpdate: function(tiles, success, failure) {
-      var tileStrs = [];
+      var t        = Canvas.tileSize,
+          tileStrs = [];
       
       for(x in tiles) {
         for (y in tiles[x]) {
           tileStrs.push([
-            x, y, parseInt(x) + TILE_SIZE, parseInt(y) + TILE_SIZE
+            x, y, parseInt(x) + t, parseInt(y) + t
           ].join(',') + '/' + tiles[x][y]);
         }
       }
@@ -54,6 +126,9 @@ function CanvasServerSession(readyCallback, failureCallback) {
     sendLine: function(points, color, size, success, failure) {
       var lineStr = serializeLine(points, color, size);
       serverRequest('send_line', {l: lineStr}, success, failure);
+    },
+    retryJoin: function() {
+      join();
     }
   }
 }
@@ -82,22 +157,6 @@ function CanvasUpdateManager(serverConn, linesCallback) {
           getStatus: function() {return status;},
           getTiles: function() {return tiles;}
         };
-    
-    function lineBox(points) {
-      var minX = points[0],
-          minY = points[1],
-          maxX = points[0],
-          maxY = points[1];
-
-      for (var i = 0; i < points.length; i += 2) {
-        minX = Math.min(minX, points[i]);
-        minY = Math.min(minY, points[i + 1]);
-        maxX = Math.max(maxX, points[i]);
-        maxY = Math.max(maxY, points[i + 1]);
-      }
-
-      return {x: minX, y: minY, x1: maxX, y1: maxY};
-    }
 
     function unserializeLineArray(str) {
       var lines       = [],
@@ -108,13 +167,13 @@ function CanvasUpdateManager(serverConn, linesCallback) {
             points    = lineParts[0].split(','),
             color     = lineParts[1],
             size      = parseInt(lineParts[2]);
-
+        
         for (var j = 0; j < points.length; j++)
           points[j] = parseFloat(points[j]);
 
-        lines.push([points, color, size, lineBox(points)]);
+        lines.push([points, color, size]);
       }
-
+      
       return lines;
     }
     
@@ -184,7 +243,9 @@ function CanvasArea(container) {
       hasBeenResized   = false,
       serverConn,
       activeTiles      = {},
-      updateManager;
+      updateManager,
+      sessionDialog,
+      reconnectDialog;
   
   function shiftBox(x, y) {
     box.x  += x;
@@ -194,22 +255,18 @@ function CanvasArea(container) {
   }
   
   function newTile(x, y, imageURL) {
-    var imageSource = new Image(),
-        
-        shade = $('<div><span>Loading...</span></div>'),
-        
-        image = $('<img />').hide(),
-        
-        canvas = $(['<canvas width="', TILE_SIZE,
-                    '" height="', TILE_SIZE, '" />'].join('')),
-        
-        node = $('<div class="canvasTile" />').
-                  width(TILE_SIZE).
-                  height(TILE_SIZE).
+    var t = Canvas.tileSize,
+        imageSource = new Image(),
+        shade  = $('<div><span>Loading...</span></div>'),
+        image  = $('<img />').hide(),
+        canvas = $(['<canvas width="', t, '" height="', t, '" />'].join('')),
+        node   = $('<div class="canvasTile" />').
+                  width(t).
+                  height(t).
                   hide().
                   append(image).
-                  append(['<span>', (x / TILE_SIZE), ',',
-                          (-y / TILE_SIZE), '</span>'].join('')).
+                  append(['<span>', (x / t), ',',
+                          (-y / t), '</span>'].join('')).
                   append(canvas).
                   append(shade);
     
@@ -235,10 +292,16 @@ function CanvasArea(container) {
   }
   
   function setTileLocation(x, y) {
-    box.x  = (TILE_SIZE * x) - (area.width() - TILE_SIZE) / 2;
-    box.y  = (TILE_SIZE * y) - (area.height() - TILE_SIZE) / 2;
-    box.x1 = (TILE_SIZE * x) + area.width() - (area.width() - TILE_SIZE) / 2;
-    box.y1 = (TILE_SIZE * y) + area.height() - (area.height() - TILE_SIZE) / 2;
+    var t  = Canvas.tileSize,
+        w  = area.width(),
+        h  = area.height(),
+        tx = t * x,
+        ty = t * y;
+    
+    box.x  = tx - (w - t) / 2;
+    box.y  = ty - (h - t) / 2;
+    box.x1 = tx + w - (w - t) / 2;
+    box.y1 = ty + h - (h - t) / 2;
   }
   
   function positionTile(x, y, tile) {
@@ -246,9 +309,10 @@ function CanvasArea(container) {
   }
   
   function tileAtPoint(x, y) {
+    var t = Canvas.tileSize;
     return getTile(
-      Math.floor((box.x + x) / TILE_SIZE) * TILE_SIZE,
-      Math.floor((box.y + y) / TILE_SIZE) * TILE_SIZE
+      Math.floor((box.x + x) / t) * t,
+      Math.floor((box.y + y) / t) * t
     );
   }
   
@@ -256,7 +320,7 @@ function CanvasArea(container) {
     if (!allTiles[x]) allTiles[x] = {};
     
     if (!allTiles[x][y]) {
-      var tile = newTile(x, y, TEST_IMAGE);
+      var tile = newTile(x, y, Canvas.testImage);
       area.append(tile.node);
       allTiles[x][y] = tile;
     }
@@ -274,8 +338,10 @@ function CanvasArea(container) {
   
   function getTileBox(tile) {
     if (!tile.box) {
-      var x = tile.x, y = tile.y;
-      tile.box = {x: x, y: y, x1: x + TILE_SIZE, y1: y + TILE_SIZE};
+      var t = Canvas.tileSize,
+          x = tile.x,
+          y = tile.y;
+      tile.box = {x: x, y: y, x1: x + t, y1: y + t};
     }
     
     return tile.box;
@@ -313,10 +379,11 @@ function CanvasArea(container) {
   }
   
   function buildTiles() {
-    var x0       = Math.floor(box.x / TILE_SIZE) * TILE_SIZE,
-        y0       = Math.floor(box.y / TILE_SIZE) * TILE_SIZE,
-        xf       = Math.ceil(box.x1 / TILE_SIZE) * TILE_SIZE,
-        yf       = Math.ceil(box.y1 / TILE_SIZE) * TILE_SIZE,
+    var t        = Canvas.tileSize,
+        x0       = Math.floor(box.x / t) * t,
+        y0       = Math.floor(box.y / t) * t,
+        xf       = Math.ceil(box.x1 / t) * t,
+        yf       = Math.ceil(box.y1 / t) * t,
         x        = x0,
         y        = y0,
         newTiles = [];
@@ -331,9 +398,9 @@ function CanvasArea(container) {
         var tile = getTile(x, y);
         activateTile(tile);
         newTiles.push(tile);
-        y += TILE_SIZE;
+        y += t;
       }
-      x += TILE_SIZE;
+      x += t;
     }
     
     // Deactive old tiles in current tiles
@@ -491,27 +558,10 @@ function CanvasArea(container) {
     }
   }
   
-  function serverConnected() {
-    //console.log('server connected');
-    updateManager = new CanvasUpdateManager(serverConn, handleUpdate);
-    updateManager.setTiles(activeTiles);
-  }
-  
-  function connectionFailed() {
-    //console.log('failed to connect to server');
-  }
-  
   function handleUpdate(update) {
     
-    // for (var x in activeTiles) {
-    //   for (var y in activeTiles[x]) {
-    //     var tile = getTile(x, y);
-    //     tile.lastUpdate = lastUpdate;
-    //     tile.shade.hide();
-    //   }
-    // }
-    
-    var tiles = update.getTiles(),
+    var t     = Canvas.tileSize,
+        tiles = update.getTiles(),
         lines = update.getLines();
     
     for (var x in tiles) {
@@ -523,16 +573,17 @@ function CanvasArea(container) {
     }
     
     for (var i = 0; i < lines.length; i++) {
+      var line    = lines[i],
+          points  = line[0];
       
       for (var j = 2; j < lines[i][0].length; j += 2) {
         // NOTE: This assumes lines do not cross tiles!
-        
-        var x       = lines[i][0][j - 2],
-            y       = lines[i][0][j - 1],
-            x1      = lines[i][0][j],
-            y1      = lines[i][0][j + 1],
-            tileX   = parseInt(Math.floor(x / TILE_SIZE) * TILE_SIZE),
-            tileY   = parseInt(Math.floor(y / TILE_SIZE) * TILE_SIZE),
+        var x       = points[j - 2],
+            y       = points[j - 1],
+            x1      = points[j],
+            y1      = points[j + 1],
+            tileX   = parseInt(Math.floor(x / t) * t),
+            tileY   = parseInt(Math.floor(y / t) * t),
             tile    = getTile(tileX, tileY),
             tileBox = getTileBox(tile);
         
@@ -542,8 +593,8 @@ function CanvasArea(container) {
           y  - tileBox.y,
           x1 - tileBox.x,
           y1 - tileBox.y,
-          lines[i][1],
-          lines[i][2]
+          line[1],
+          line[2]
         );
       }
       
@@ -551,38 +602,48 @@ function CanvasArea(container) {
     }
   }
   
-  function initialize() {
-    serverConn = new CanvasServerSession(serverConnected, connectionFailed);
+  function successfullyJoined() {
+    sessionDialog.close();
+    reconnectDialog.close();
     
-    area = $('<div class="canvasArea" />').appendTo(container);
-    
-    area.mousedown(mouseInteractionBegan);
-    area.mousemove(mouseMove);
-    area.mouseup(mouseInteractionEnded);
-    area.mouseout(function(e) {
-      if (e.relatedTarget != document.body) return
-      mouseInteractionEnded();
-    });
-    
-    area
-      .bind('mousewheel', function(event, delta) {
-        console.log(event);
-        console.log(delta);
-        var dir = delta > 0 ? 'Up' : 'Down',
-            vel = Math.abs(delta);
-        $(this).text(dir + ' at a velocity of ' + vel);
-        return false;
-      });
-    
-  
-    // prevent text selection
-    container[0].onmousedown = function() {return false;}
-    
-    setMode('panning');
-    buildTiles();
+    updateManager = new CanvasUpdateManager(serverConn, handleUpdate);
+    updateManager.setTiles(activeTiles);
   }
   
-  initialize();
+  function failedToJoin() {
+    sessionDialog.close();
+    reconnectDialog.promptRetry(retryJoin);
+  }
+  
+  function retryJoin() {
+    serverConn.retryJoin();
+  }
+
+  sessionDialog = new UnclosableMessageDialog(
+    'Connecting',
+    'Please wait, you are being connected...'
+  );
+  
+  reconnectDialog = new ReconnectDialog();
+  
+  serverConn = new CanvasServerSession(successfullyJoined, failedToJoin);
+  
+  area = $('<div class="canvasArea" />').appendTo(container);
+  
+  area.mousedown(mouseInteractionBegan);
+  area.mousemove(mouseMove);
+  area.mouseup(mouseInteractionEnded);
+  area.mouseout(function(e) {
+    if (e.relatedTarget != document.body) return
+    mouseInteractionEnded();
+  });
+  
+  // prevent text selection
+  container[0].onmousedown = function() {return false;}
+  
+  setMode('panning');
+  buildTiles();
+
   return {
     setPaintColor: function(color) {drawingColor = color;},
     setBrushSize: function(size) {drawingSize = size;},
@@ -611,7 +672,7 @@ function hasCanvas() {
 function loadApplication() {
   var defaultColor    = '000000',
       defaultSize     = 3,
-      canvasContainer = $('#canvasAreaOuterContainer'),
+      canvasContainer = $('#canvasAreaContainer'),
       toolbar         = $('#toolbar'),
       modeNodes       = {
         panning: {
@@ -622,12 +683,15 @@ function loadApplication() {
           radio: $('#drawingMode'),
           button: $("label[for='drawingMode']")
         },
-      };
+      },
+      mode,
+      lastMode;
   
-  function setMode(mode) {
-    modeNodes[mode].button.click();
-    modeNodes[mode].radio.attr('checked', 'checked');
-    canvasArea.setMode(mode);
+  function setMode(newMode) {
+    mode = newMode;
+    modeNodes[newMode].button.click();
+    modeNodes[newMode].radio.attr('checked', 'checked');
+    canvasArea.setMode(newMode);
   }
   
   canvasArea = new CanvasArea(canvasContainer);
@@ -650,8 +714,8 @@ function loadApplication() {
   
   $('#jumpDialog').dialog({
     resizable: false,
-    modal: true,
-    autoOpen: false,
+    modal:     true,
+    autoOpen:  false,
     buttons: {
       Go: function() {
         jumpToTile();
@@ -663,9 +727,13 @@ function loadApplication() {
     }
   });
   
-  $('#jumpDialog form').submit(function(e) {
+  function jumpAndCloseDialog() {
     jumpToTile();
     $('#jumpDialog').dialog('close');
+  }
+  
+  $('#jumpDialog form').submit(function(e) {
+    jumpAndCloseDialog();
     return false;
   });
   
@@ -674,7 +742,12 @@ function loadApplication() {
   }).click(function(e) {
     $('#jumpDialog').dialog('open');
     $('#jumpX').focus();
+    $('#jumpX')[0].select();
   });
+  
+  $("#jumpDialog input[type='text']").keypress(function(e) {
+    if (e.keyCode == 13) jumpAndCloseDialog();
+  })
 
   $('#modeSelector input').
     change(function(e) {
@@ -688,6 +761,17 @@ function loadApplication() {
     change: function(e, ui) {
       canvasArea.setBrushSize(ui.value);
       setMode('drawing');
+    }
+  });
+  
+  $(window).keydown(function(e) {
+    lastMode = mode;
+    if (e.keyCode == 32 && mode == 'drawing') {
+      setMode('panning');
+    }
+  }).keyup(function(e) {
+    if (e.keyCode == 32) {
+      setMode(lastMode);
     }
   });
   

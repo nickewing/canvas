@@ -17,7 +17,7 @@
 -define(mb_timeout_interval, 60000). % 1 minute
 
 % When when no path is given, redirect here
--define(default_www_path, "/client/MainWindow.html").
+-define(default_www_path, "/client/index.html").
 
 %% Postgres database connection settings
 -define(ls_host,  "localhost").

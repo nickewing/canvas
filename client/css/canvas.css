@@ -14,7 +14,7 @@ input {
   color: #AAA !important;
 }
 
-#canvasAreaOuterContainer {
+#canvasAreaContainer {
   width: 100%;
   margin: auto;
 }
@@ -140,4 +140,9 @@ ul li {
 
 #toolbar .end {
   clear: both;
+}
+
+
+.unclosable .ui-dialog-titlebar-close {
+  display: none;
 }

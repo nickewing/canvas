@@ -1,14 +1,24 @@
+<!DOCTYPE html>
+
 <html lang="en">
   <head>
     <title>Canvas</title>
-    <link rel="stylesheet" type="text/css" href="css/canvas_area.css" />
+    <link rel="stylesheet" type="text/css" href="css/canvas.css" />
     <link rel="stylesheet" media="screen" type="text/css" href="js/jquery/colorpicker/css/colorpicker.css" />
     <link rel="stylesheet" media="screen" type="text/css" href="css/custom-theme/jquery-ui-1.8rc3.custom.css" />
   </head>
   <body>
     
+    <div id="jumpDialog" title="Jump to Tile" style="display:none">
+      <p>Enter the coordinates of the tile you would like to jump to.</p>
+      <form>
+        x: <input type="text" id="jumpX" size="5" maxlength="12" />
+        y: <input type="text" id="jumpY" size="5" maxlength="12" />
+      </form>
+    </div>
+    
     <div id="application" style="display:none">    
-      <div id="canvasAreaOuterContainer"></div>
+      <div id="canvasAreaContainer"></div>
       <div id="toolbar">
         
         <div class="first section">
@@ -38,14 +48,6 @@
         </div>
       
         <div class="end"></div>
-      </div>
-    
-      <div id="jumpDialog" title="Jump to Tile" style="display:none">
-        <p>Enter the coordinates of the tile you would like to jump to.</p>
-        <form>
-          x: <input type="text" id="jumpX" size="5" maxlength="12" />
-          y: <input type="text" id="jumpY" size="5" maxlength="12" />
-        </form>
       </div>
     </div> 
        
@@ -77,7 +79,7 @@
     <script type="text/javascript" src="js/jquery/jquery-ui.js"></script>
     <script type="text/javascript" src="js/jquery/colorpicker/js/colorpicker.js"></script>
     <script type="text/javascript" src="js/jquery/jquery.mousewheel.min.js"></script>
-    <script type="text/javascript" src="js/canvas_area.js"></script>
+    <script type="text/javascript" src="js/canvas.js"></script>
     <script type="text/javascript">
       $().ready(function() {
         if (!hasCanvas()) {

@@ -251,7 +251,7 @@ lines_to_resp_str(Lines) ->
   string:join(lists:map(fun line_to_resp_str/1, Lines), ";").
 
 %% Serialize a line to a response string
-line_to_resp_str(#line{points = P, size = S, color = C}) ->
+line_to_resp_str(#line{points = P, size = S, color = C, box = B}) ->
   string:join([
     points_to_resp_str(P),
     string:right(util:to_hex(C), 6, $0),
@@ -307,37 +307,41 @@ parse_points_test() ->
   ].
 
 parse_line_test() ->
-  [
-    ?assertMatch(
-      #line{points = [24,543,3242,545], size = 3, color = 14653738},
-      parse_line("24,543,3242,545/14653738/3")
-    )
-  ].
+  ?assertMatch(
+    #line{points = [24,543,3242,545], size = 3, color = 14653738},
+    parse_line("24,543,3242,545/df992a/3")
+  ).
 
 lines_to_resp_str_test() ->
-  [
-    ?assertEqual(
-      "24,543,3242,545/14653738/3;-20,40/0/30",
-      lines_to_resp_str([
-        #line{points = [24,543,3242,545], size = 3, color = 14653738},
-        #line{points = [-20,40], size = 30, color = 0}
-      ])
-    )
-  ].
+  ?assertEqual(
+    "24,543,3242,545/df992a/3;-20,40/000000/30",
+    lines_to_resp_str([
+      #line{points = [24,543,3242,545],
+            size   = 3,
+            color  = 14653738,
+            box    = #box{x=24, y=543, x1=3242, y1=545}},
+      #line{points = [-20,40],
+            size   = 30,
+            color  = 0,
+            box    = #box{x=-20, y=40, x1=-20, y1=40}}])
+  ).
 
 line_to_resp_str_test() ->
   [
+    % line must have even number of point values
     ?assertError(function_clause,
       line_to_resp_str(
-        #line{points = [24,543,3242], size = 3, color = 14653738}
-      )
-    ),
+        #line{points = [24,543,3242],
+              size   = 3,
+              color  = 14653738,
+              box    = #box{x=24, y=543, x1=3242, y1=543}})),
     ?assertEqual(
-      "24,543,3242,545/14653738/3",
+      "24,543,3242,545/df992a/3",
       line_to_resp_str(
-        #line{points = [24,543,3242,545], size = 3, color = 14653738}
-      )
-    )
+        #line{points = [24,543,3242,545],
+              size   = 3,
+              color  = 14653738,
+              box    = #box{x=24, y=543, x1=3242, y1=545}}))
   ].
 
 points_to_resp_str_test() ->
