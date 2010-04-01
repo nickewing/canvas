@@ -15,9 +15,7 @@
   %% Server interface
   start/0, test/1,
   %% Worker
-  worker_start/3,
-  
-  
+  tile_drawer/2,
   
   test/0
 ]).
@@ -55,7 +53,7 @@ test(Pid) ->
 %% @doc Called when a connection is made to the server
 init([]) ->
   io:format("~w Raster manager started.~n", [self()]),
-  {ok, #state{painter = raster_painter:start()}}.
+  {ok, #state{}}.
 
 %% @doc Handle sync. call to manager
 %% Unknown message
@@ -63,17 +61,8 @@ handle_call(_Message, _From, S) ->
   {reply, error, S}.
 
 %% @doc Handle async. call to manage
-handle_cast(test, #state{painter = Painter} = S) ->
-  LSConn = line_store:connect(),
-  Lines = line_store:get_oldest_unpainted_lines(LSConn, 5),
-  
-  lists:map(fun(L) ->
-    spawn(?MODULE, worker_start, [LSConn, L, self()])
-  end, Lines),
-  
-  % TODO: CLOSE LINESTORE AFTER ALL WORKERS ARE DONE!
-  % line_store:disconnect(LSConn)
-  
+handle_cast(test, #state{} = S) ->
+  paint_unpainted_tiles(),
   {noreply, S};
 %% Unknown message
 handle_cast(Message, S) ->
@@ -95,12 +84,20 @@ code_change(_OldVersion, S, _Extra) ->
 %%% Worker functions
 %%%%%%%%%%%%%%%%%%%%
 
-worker_start(LSConn, #line{box = #box{x = X, y = Y} = Box}, Parent) ->
-  Lines = line_store:get_unpainted_lines(LSConn, Box),
-  paint_tile_lines(X, Y, lines_to_paint_tuples(Lines, X, Y)).
-
-
-
+tile_drawer(#tile{id=TID, x=X, y=Y, last_painted=LastPainted,
+                  box=Box}, Parent) ->
+  LS  = line_store:connect(),
+  % update tile data
+  line_store:set_tile_painting_status(LS, TID, 1),
+  line_store:set_tile_last_painted(LS, TID, util:now_milliseconds()),
+  % fetch all the lines and paint them
+  Lines = line_store:get_lines(LS, Box, LastPainted),
+  ok = paint_tile_lines(X, Y, lines_to_paint_tuples(Lines, X, Y)),
+  % update tile status
+  line_store:set_tile_painting_status(LS, TID, 0),
+  line_store:disconnect(LS),
+  Parent ! {lines, Lines},
+  ok.
 
 test() ->
   {ok, R} = start(),
@@ -111,6 +108,43 @@ test() ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Internal API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+paint_unpainted_tiles() ->
+  LS = line_store:connect(),
+  paint_unpainted_tiles(LS),
+  line_store:disconnect(LS).
+paint_unpainted_tiles(LS) ->
+  case line_store:get_next_tiles_to_paint(LS, 10) of
+    [] ->
+      ok;
+    Tiles ->
+      io:format("Tiles to paint: ~p~n", [Tiles]),
+  
+      lists:foreach(fun(T) ->
+        spawn(?MODULE, tile_drawer, [T, self()])
+      end, Tiles),
+  
+      LinesToArchive = lists:foldl(fun(_T, List) ->
+        receive
+          {lines, Lines} ->
+            lists:append(List, Lines)
+        after 30000 ->
+          erlang:throw({drawing_error, Tiles})
+        end
+      end, [], Tiles),
+  
+      % archive painted lines if they are painted on all tiles they intersect
+      lists:foreach(fun(#line{id = LID} = L) ->
+        case line_store:unpainted_line_tiles_count(LS, L) of
+          C when C < 1 ->
+            io:format("Archive line: ~w ~n", [LID]),
+            line_store:archive_line(LS, LID);
+          _ -> ok
+        end
+      end, sets:to_list(sets:from_list(LinesToArchive))),
+      
+      paint_unpainted_tiles(LS)
+  end.
 
 lines_to_paint_tuples(Lines, OriginX, OriginY) ->
   lists:map(fun(#line{points = Points, size = Size, color = Color}) ->
@@ -126,31 +160,46 @@ transpose_paint_points(Points, OriginX, OriginY) ->
   end, x, Points),
   Res.
 
-ensure_tile_dirs(X, _Y) ->
-  util:make_dir_path([var, tiles, util:num_to_str(X)]).
+tile_path(X) ->
+  string:join(["priv/www/var/tiles/", util:num_to_str(X), "/"], "").
 
-tile_path(X, Y) ->
-  "var/tiles/" ++ util:num_to_str(X) ++ "/" ++ util:num_to_str(Y) ++ ".png".
+tile_filename(Y, Suff) ->
+  string:join([util:num_to_str(Y), Suff, ".jpg"], "").
 
-paint_tile_lines(BoxX, BoxY, Lines) ->
+paint_tile_lines(X, Y, Lines) ->
+  io:format("~p ~p ~n", [X, Y]),
+  Dir      = tile_path(X),
+  CurFN    = tile_filename(Y, "_" ++ util:num_to_str(util:now_milliseconds())),
+  CurPath  = Dir ++ CurFN,
+  LinkFN   = tile_filename(Y, ""),
+  LinkPath = Dir ++ LinkFN,
+  % determine real location of old file
+  OldPath = case file:read_link(LinkPath) of
+    {ok, ReadPath} -> ReadPath;
+    _ -> none
+  end,
+  % make sure directories exist
+  util:make_dir_path([priv, www, var, tiles, util:num_to_str(X)]),
+  % copy old file
+  file:copy(LinkPath, CurPath),
+  % paint the lines
   Painter = raster_painter:start(),
-  
-  io:format("~p~n", [tile_path(BoxX, BoxY)]),
-  
-  ensure_tile_dirs(BoxX, BoxY),
-  
-  raster_painter:start_drawing(Painter, tile_path(BoxX, BoxY),
-                               ?tile_size, ?tile_size),
-  
+  raster_painter:start_drawing(Painter, CurPath, ?tile_size, ?tile_size),
   lists:map(fun(L) ->
     raster_painter:draw_line(Painter, L)
   end, Lines),
-  
-  raster_painter:stop_drawing(Painter),
-  raster_painter:stop(Painter).
-
-point_tile(X, Y) ->
-  {(X div ?tile_size) * ?tile_size, (Y div ?tile_size) * ?tile_size}.
+  ok = raster_painter:stop_drawing(Painter),
+  raster_painter:stop(Painter),
+  % point symlink to new file
+  file:make_symlink(CurFN, LinkPath),
+  % sleep a bit to make sure people are done accessing the old file
+  timer:sleep(5000),
+  % delete old image
+  case OldPath of
+    none -> ok;
+    File -> file:delete(File)
+  end,
+  ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests

@@ -34,8 +34,8 @@
 
 % User information
 -record(user, {ip}).
-% Tile information
--record(tile, {box, time}).
+% Tile record information
+-record(tile, {id, x, y, last_painted, box}).
 % Line information
 -record(line, {id, points, size, color, box, time, user}).
 % Server state

@@ -20,7 +20,9 @@
   now_milliseconds/1,
   now_seconds/0,
   now_seconds/1,
-  make_dir_path/1
+  make_dir_path/1,
+  ceil/1,
+  floor/1
 ]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -123,9 +125,30 @@ make_dir_path(PathSegments)
   end, PathSegments),
   ok.
 
+%%% Math functions
+%%%%%%%%%%%%%%%%%%
+
+floor(X) ->
+    T = erlang:trunc(X),
+    case (X - T) of
+        Neg when Neg < 0 -> T - 1;
+        Pos when Pos > 0 -> T;
+        _ -> T
+    end.
+
+ceil(X) ->
+    T = erlang:trunc(X),
+    case (X - T) of
+        Neg when Neg < 0 -> T;
+        Pos when Pos > 0 -> T + 1;
+        _ -> T
+    end.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Tests
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% TODO: incomplete tests
 
 reducel_test() ->
   Fn0  = fun(X, Y) -> X / Y end,

@@ -18,6 +18,9 @@
 -include("spatial.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+% Tile request information
+-record(tile_req, {box, time}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% External API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -137,7 +140,7 @@ fetch_ls_tiles_lines(Conn, Tiles) ->
   lists:flatten(Lines).
 
 %% Fetch lines from line_store for requested tile 
-fetch_ls_tile_lines(Conn, #tile{box = Box, time = Time}) ->
+fetch_ls_tile_lines(Conn, #tile_req{box = Box, time = Time}) ->
   line_store:get_lines(Conn, Box, Time).
 
 %% Wait for lines to be sent from mailbox
@@ -166,7 +169,7 @@ send_line_to_mailboxes([{_SID, Mailbox}|T], Line) ->
 
 %% Map tiles to their boxes
 tiles_boxes(Tiles) ->
-  lists:map(fun(#tile{box = B}) -> B end, Tiles).
+  lists:map(fun(#tile_req{box = B}) -> B end, Tiles).
 
 %% Calculate the bounding box for a set of tiles
 box_tiles(Tiles) ->
@@ -192,12 +195,12 @@ parse_params_sid(Req) ->
 parse_tiles(Str) ->
   lists:map(fun parse_tile/1, string:tokens(Str, ";")).
 
-%% parse a #tile from a string
+%% parse a #tile_req from a string
 parse_tile(Str) ->
   [PointStr, TimeStr] = string:tokens(Str, "/"),
   [X, Y, X1, Y1]      = parse_points(PointStr),
   Time                = util:str_to_num(TimeStr),
-  #tile{box = #box{x = X, y = Y, x1 = X1, y1 = Y1}, time = Time}.
+  #tile_req{box = #box{x = X, y = Y, x1 = X1, y1 = Y1}, time = Time}.
 
 %% parse points from string in the form of "132,412,34123,413"
 parse_points(Str) ->
@@ -251,7 +254,7 @@ lines_to_resp_str(Lines) ->
   string:join(lists:map(fun line_to_resp_str/1, Lines), ";").
 
 %% Serialize a line to a response string
-line_to_resp_str(#line{points = P, size = S, color = C, box = B}) ->
+line_to_resp_str(#line{points = P, size = S, color = C}) ->
   string:join([
     points_to_resp_str(P),
     string:right(util:to_hex(C), 6, $0),
@@ -282,8 +285,8 @@ parse_tiles_test() ->
   [
     ?assertEqual(
       [
-        #tile{box = #box{x=123,y=1234,x1=3341,y1=3412}, time = 123423334},
-        #tile{box = #box{x=4244,y=452,x1=4523,y1=45234}, time = 123412333}
+        #tile_req{box = #box{x=123,y=1234,x1=3341,y1=3412}, time = 123423334},
+        #tile_req{box = #box{x=4244,y=452,x1=4523,y1=45234}, time = 123412333}
       ],
       parse_tiles("123,1234,3341,3412/123423334;4244,452,4523,45234/123412333")
     )
@@ -292,7 +295,7 @@ parse_tiles_test() ->
 parse_tile_test() ->
   [
     ?assertEqual(
-      #tile{box = #box{x=123,y=1234,x1=3341,y1=3412}, time = 123423334},
+      #tile_req{box = #box{x=123,y=1234,x1=3341,y1=3412}, time = 123423334},
       parse_tile("123,1234,3341,3412/123423334")
     )
   ].

@@ -152,8 +152,8 @@ ETERM* eiRouteReq(byte *buf, State *state) {
   char    *cmd;
   
   cmdTuple  = erl_decode(buf);
-  eCmd    = erl_element(1, cmdTuple);
-  cmd     = ERL_ATOM_PTR(eCmd);
+  eCmd      = erl_element(1, cmdTuple);
+  cmd       = ERL_ATOM_PTR(eCmd);
   if (strcmp(cmd, "start_drawing") == 0) {
     result = eiStartDrawingReq(cmdTuple, state);
   } else if (strcmp(cmd, "draw_line") == 0) {
@@ -186,8 +186,6 @@ int main() {
     erl_free_term(result);
   }
   
-  if (state->canvas)
-    RPFreeCanvas(state->canvas);
   free(state);
   
   return 0;

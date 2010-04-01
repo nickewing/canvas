@@ -52,9 +52,7 @@ RPCanvas* RPNewCanvas(char *filename, unsigned int width,
   canvas->mWand    = NewMagickWand();
   canvas->dWand    = NewDrawingWand();
   canvas->cWand    = NewPixelWand();
-  canvas->filename = malloc(sizeof(char) * strlen(filename));
-  
-  strcpy(canvas->filename, filename);
+  canvas->filename = strdup(filename);
   
   /* Read image */
   status = MagickReadImage(canvas->mWand, filename);
@@ -80,8 +78,8 @@ int RPDrawCanvas(RPCanvas *canvas) {
   MagickBooleanType status;
   
   /* Set compression */
-  MagickSetCompression(canvas->mWand, BZipCompression);
-  MagickSetCompressionQuality(canvas->mWand, 4);
+  MagickSetCompression(canvas->mWand, JPEGCompression);
+  MagickSetImageCompressionQuality(canvas->mWand, 90);
   
   /* Write image */
   MagickDrawImage(canvas->mWand, canvas->dWand);

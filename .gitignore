@@ -1,4 +1,7 @@
 .DS_Store
+.rake_tasks
 /server/deps/*
 /server/ebin/*
 /server/doc/*
+/server/bin/*
+/server/priv/www/var/*
